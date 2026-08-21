@@ -12,6 +12,8 @@ import imgui.type.ImBoolean
 object PanelManager : PanelController {
     private val open = LinkedHashMap<String, PanelSpec>()
     private val openFlag = ImBoolean(true)
+    /** Panels that have been submitted at least once this session (ini-less first show → dock to the side node). */
+    private val shownOnce = HashSet<String>()
 
     override fun isOpen(id: String): Boolean = open.containsKey(id)
     override fun open(panel: PanelSpec) {
@@ -31,6 +33,11 @@ object PanelManager : PanelController {
     fun renderAll() {
         for (panel in open.values.toList()) {
             openFlag.set(true)
+            if (shownOnce.add(panel.id)) {
+                // FirstUseEver: a window with saved ini settings keeps them; a brand-new one docks to the side.
+                val side = DockHost.sideNodeId()
+                if (side != 0) imgui.internal.ImGui.setNextWindowDockID(side, imgui.flag.ImGuiCond.FirstUseEver)
+            }
             val shown = ImGui.begin(panel.windowLabel, openFlag, panel.flags)
             try {
                 if (shown) {

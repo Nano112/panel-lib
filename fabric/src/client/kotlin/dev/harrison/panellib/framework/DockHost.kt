@@ -22,6 +22,41 @@ object DockHost {
 
     private var firstFrame = true
     private var pendingLayoutRebuild = false
+    private var dockId = 0
+
+    /**
+     * Id of a side (non-central) leaf node new panels should dock into. Found by walking the saved
+     * tree; if the dockspace has no side split at all (only the pass-through centre), one is created.
+     */
+    fun sideNodeId(): Int {
+        if (dockId == 0) return 0
+        val root = imgui.internal.ImGui.dockBuilderGetNode(dockId)
+        if (root.ptr == 0L) return 0
+        var node = root
+        while (true) {
+            val a = node.childNodeFirst; val b = node.childNodeSecond
+            if (a.ptr == 0L || b.ptr == 0L) break
+            node = when {
+                !containsCentral(a) -> a
+                !containsCentral(b) -> b
+                else -> a
+            }
+        }
+        if (node.ptr == root.ptr || node.isCentralNode) {
+            // No side node yet: split the right 38% off the root.
+            val rightId = ImInt(); val centralId = ImInt()
+            imgui.internal.ImGui.dockBuilderSplitNode(dockId, ImGuiDir.Right, 0.38f, rightId, centralId)
+            imgui.internal.ImGui.dockBuilderFinish(dockId)
+            return rightId.get()
+        }
+        return node.id
+    }
+
+    private fun containsCentral(n: imgui.internal.ImGuiDockNode): Boolean {
+        if (n.ptr == 0L) return false
+        if (n.isCentralNode) return true
+        return containsCentral(n.childNodeFirst) || containsCentral(n.childNodeSecond)
+    }
 
     fun resetLayout() { pendingLayoutRebuild = true }
 
@@ -44,7 +79,7 @@ object DockHost {
 
         if (ImGui.beginMenuBar()) { Toolbar.renderMenuBar(); ImGui.endMenuBar() }
 
-        val dockId = ImGui.getID(DOCKSPACE_ID)
+        dockId = ImGui.getID(DOCKSPACE_ID)
         if (firstFrame) {
             // Fresh ini → no node yet → build the default layout once.
             if (imgui.internal.ImGui.dockBuilderGetNode(dockId).ptr == 0L) pendingLayoutRebuild = true
