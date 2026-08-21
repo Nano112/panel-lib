@@ -1,0 +1,15 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "dev.harrison.panellib.mixin",
+  "compatibilityLevel": "${mixin_java}",
+  "client": [
+    "GlSurfaceMixin",
+    "KeyboardMixin",
+    "MouseMixin",
+    "RenderSystemMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

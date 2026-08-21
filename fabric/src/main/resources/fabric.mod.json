@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "id": "panellib",
+  "version": "${version}",
+  "name": "panel-lib",
+  "description": "Shared Dear ImGui overlay: one toolbar, dockspace, theme and widget kit that any mod can contribute panels to.",
+  "authors": ["Harrison"],
+  "license": "MIT",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      { "adapter": "kotlin", "value": "dev.harrison.panellib.PanelLibClient" }
+    ]
+  },
+  "mixins": [
+    { "config": "panellib.client.mixins.json", "environment": "client" }
+  ],
+  "depends": {
+    "fabricloader": ">=${loader_min}",
+    "fabric-api": "*",
+    "fabric-language-kotlin": ">=${flk_min}",
+    "minecraft": "${minecraft_compat}",
+    "java": ">=${java_version}"
+  },
+  "custom": {
+    "panellib": { "entrypoint": "panellib" }
+  }
+}
