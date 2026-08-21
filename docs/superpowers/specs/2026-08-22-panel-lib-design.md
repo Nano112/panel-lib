@@ -1,6 +1,6 @@
 # panel-lib — design (sub-project 2 of the MC-Inspector program)
 
-Date: 2026-08-22 · Status: building
+Date: 2026-08-22 · Status: implemented 2026-08-22 (6 versions build; dogfooded via MC-Inspector MCP host)
 
 ## What
 

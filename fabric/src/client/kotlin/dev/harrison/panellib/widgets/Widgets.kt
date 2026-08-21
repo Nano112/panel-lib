@@ -184,9 +184,9 @@ object Widgets {
     }
 
     /** Striped table with horizontal inner borders and vertical scrolling. */
-    inline fun table(id: String, columns: Int, extraFlags: Int = 0, block: () -> Unit) {
+    inline fun table(id: String, columns: Int, extraFlags: Int = 0, height: Float = 0f, block: () -> Unit) {
         val flags = ImGuiTableFlags.RowBg or ImGuiTableFlags.BordersInnerH or ImGuiTableFlags.ScrollY or extraFlags
-        if (ImGui.beginTable(id, columns, flags)) {
+        if (ImGui.beginTable(id, columns, flags, 0f, height)) {
             try { block() } finally { ImGui.endTable() }
         }
     }

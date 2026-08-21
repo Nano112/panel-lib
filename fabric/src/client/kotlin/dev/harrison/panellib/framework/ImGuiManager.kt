@@ -26,7 +26,9 @@ object ImGuiManager {
             ImGui.createContext()
             val io: ImGuiIO = ImGui.getIO()
             io.iniFilename = INI_FILENAME
-            io.addConfigFlags(ImGuiConfigFlags.NavEnableKeyboard)
+            // Keyboard nav stays OFF: with it on, WantCaptureKeyboard is true whenever any ImGui window is
+            // focused, which would swallow every game key (hotkeys, keybinds) while the overlay is open.
+            // Without it, keys reach ImGui only while a text input is active or a modal is open.
             // Docking ON (full-viewport DockHost + dockable panels; layout persisted in the ini).
             // Multi-viewport stays OFF: single overlay into MC's framebuffer.
             io.addConfigFlags(ImGuiConfigFlags.DockingEnable)
@@ -53,11 +55,12 @@ object ImGuiManager {
         if (!focused) {
             io.setMousePos(-Float.MAX_VALUE, -Float.MAX_VALUE)
             for (i in 0 until 5) io.setMouseDown(i, false)
-        } else if (windowHandle != 0L) {
-            // Safety net: push the real cursor position after newFrame so ImGui always has a valid one.
-            val mx = DoubleArray(1); val my = DoubleArray(1)
-            GLFW.glfwGetCursorPos(windowHandle, mx, my)
-            io.setMousePos(mx[0].toFloat(), my[0].toFloat())
+        } else {
+            // Use Minecraft's notion of the cursor (fed by MouseHandler.onMove) rather than polling GLFW:
+            // it is always valid, and synthetic input injected at the MouseHandler level (automation,
+            // MC-Inspector's MCP host) moves it while the OS cursor stays put.
+            val mh = net.minecraft.client.Minecraft.getInstance().mouseHandler
+            io.setMousePos(mh.xpos().toFloat(), mh.ypos().toFloat())
         }
     }
 

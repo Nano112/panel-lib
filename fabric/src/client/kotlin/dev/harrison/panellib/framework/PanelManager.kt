@@ -14,8 +14,11 @@ object PanelManager : PanelController {
     private val openFlag = ImBoolean(true)
 
     override fun isOpen(id: String): Boolean = open.containsKey(id)
-    override fun open(panel: PanelSpec) { open.putIfAbsent(panel.id, panel); Overlay.ensureOpen() }
-    override fun close(id: String) { open.remove(id) }
+    override fun open(panel: PanelSpec) {
+        PanelLibLog.LOGGER.debug("[panel-lib] open panel {}", panel.id)
+        open.putIfAbsent(panel.id, panel); Overlay.ensureOpen()
+    }
+    override fun close(id: String) { PanelLibLog.LOGGER.debug("[panel-lib] close panel {}", id); open.remove(id) }
     override fun toggle(panel: PanelSpec) { if (isOpen(panel.id)) close(panel.id) else open(panel) }
     fun anyOpen(): Boolean = open.isNotEmpty()
     fun openPanels(): List<PanelSpec> = open.values.toList()
@@ -36,7 +39,7 @@ object PanelManager : PanelController {
             } finally {
                 ImGui.end()
             }
-            if (!openFlag.get()) close(panel.id)
+            if (!openFlag.get()) { PanelLibLog.LOGGER.debug("[panel-lib] panel {} closed via title bar (shown={})", panel.id, shown); close(panel.id) }
         }
     }
 }

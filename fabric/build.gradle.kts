@@ -38,7 +38,8 @@ dependencies {
     // Dear ImGui. Loom `include` is non-transitive: binding, backend and every native must be
     // listed. MC ships its own LWJGL suite, so exclude the whole org.lwjgl group from
     // imgui-java-lwjgl3 (its BOM would otherwise force-upgrade LWJGL and crash at runtime).
-    include(implementation("io.github.spair:imgui-java-binding:$imguiVersion")!!)
+    // `api`: consumers call ImGui directly inside their panel render callbacks.
+    include(api("io.github.spair:imgui-java-binding:$imguiVersion")!!)
     include(implementation("io.github.spair:imgui-java-lwjgl3:$imguiVersion") {
         exclude(group = "org.lwjgl")
     }!!)

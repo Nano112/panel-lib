@@ -35,7 +35,10 @@ object Keybinds : KeybindRegistrar {
     /** Drain presses. Call every client tick. */
     fun handleInput() {
         while (overlay.consumeClick()) Overlay.toggle()
-        for ((km, action) in actions) while (km.consumeClick()) action()
+        for ((km, action) in actions) while (km.consumeClick()) {
+            dev.harrison.panellib.framework.PanelLibLog.LOGGER.debug("[panel-lib] keybind {} fired", km.name)
+            action()
+        }
     }
 
     private fun bind(translationKey: String, defaultKey: Int): KeyMapping {
