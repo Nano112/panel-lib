@@ -7,7 +7,8 @@
     "GlSurfaceMixin",
     "KeyboardMixin",
     "MouseMixin",
-    "RenderSystemMixin"
+    "RenderSystemMixin",
+    "WindowAccessor"
   ],
   "injectors": {
     "defaultRequire": 1

@@ -27,6 +27,7 @@ object PanelLibClient : ClientModInitializer {
         config.accent?.let { runCatching { theme = Themes.withAccent(theme, it) }.onFailure { e -> LOGGER.warn("[panel-lib] bad accent in config: {}", e.message) } }
         Theme.current = theme
 
+        dev.harrison.panellib.framework.GameViewport.enabled = config.embedGame
         Keybinds.registerBuiltins()
         val registry = Registry(PanelManager, Keybinds)
         Toolbar.bind(registry)

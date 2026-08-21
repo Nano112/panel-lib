@@ -54,7 +54,7 @@ public class KeyboardMixin {
         require = 1
     )
     private void panellib$onEscape_legacy(long window, int key, int scancode, int action, int mods, CallbackInfo ci) {
-        if (!Overlay.isFocused()) return;
+        if (!Overlay.isVisible()) return;
         if (key == GLFW.GLFW_KEY_ESCAPE && (action == GLFW.GLFW_PRESS || action == GLFW.GLFW_REPEAT)) {
             Overlay.onEscape();
             ci.cancel();
@@ -68,7 +68,7 @@ public class KeyboardMixin {
         require = 1
     )
     private void panellib$onEscape(long window, int action, KeyEvent keyEvent, CallbackInfo ci) {
-        if (!Overlay.isFocused()) return;
+        if (!Overlay.isVisible()) return;
         if (keyEvent.key() == GLFW.GLFW_KEY_ESCAPE && (action == GLFW.GLFW_PRESS || action == GLFW.GLFW_REPEAT)) {
             Overlay.onEscape();
             ci.cancel();

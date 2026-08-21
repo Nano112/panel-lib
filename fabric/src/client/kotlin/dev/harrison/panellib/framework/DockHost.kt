@@ -87,6 +87,10 @@ object DockHost {
         }
         ImGui.dockSpace(dockId, 0f, 0f, ImGuiDockNodeFlags.PassthruCentralNode or ImGuiDockNodeFlags.NoDockingInCentralNode)
         maybeBuildDefaultLayout(dockId)
+        // Where the game lives this frame (embedded mode renders Minecraft into exactly this rectangle).
+        val central = imgui.internal.ImGui.dockBuilderGetCentralNode(dockId)
+        if (central.ptr != 0L) GameViewport.setCentralFromLogical(central.posX, central.posY, central.sizeX, central.sizeY)
+        else GameViewport.central = null
 
         ImGui.end()
         ImGui.popStyleVar(2)

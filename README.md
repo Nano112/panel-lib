@@ -44,6 +44,15 @@ panel-lib owns the window (`ImGui.begin/end`, close button, docking) — the ren
 content. Panel ids become `<modId>:<id>` and are stable keys for the saved layout. Consumers may call
 `ImGui.*` directly inside render callbacks (the binding is an `api` dependency).
 
+## Embedded game
+
+While the overlay is open, Minecraft renders at the size of the dockspace's central (empty) area and the
+frame is placed there before the buffer swap — panels sit *beside* the game, not on top of it, with correct
+aspect ratio, GUI scale and HUD. The real window size is restored the moment the overlay closes or a vanilla
+screen opens. Toggle with **Layout ▾ → Embed game in layout** or `"embed_game": false` in `config/panellib.json`.
+(Implemented by feeding Minecraft a spoofed framebuffer size through its own `Window.onFramebufferResize` path and
+a two-blit composite at present time — nothing in MC's render pipeline is patched.)
+
 ## Overlay behaviour
 
 - **K** toggles the overlay (rebindable, category "panel-lib"). Opening any panel also shows the overlay.

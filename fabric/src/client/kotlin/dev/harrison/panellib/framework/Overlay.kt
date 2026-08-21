@@ -15,23 +15,53 @@ object Overlay {
     @Volatile private var overlayOpen = false
     @Volatile private var cursorReleased = false
 
-    @JvmStatic fun toggle() { overlayOpen = !overlayOpen }
+    /**
+     * Game-focus sub-mode: the overlay stays visible but the game owns mouse + keyboard (cursor grabbed,
+     * mouse-look works). Entered by clicking the game area, left with Escape. Lets you play with panels open.
+     */
+    @Volatile var gameFocus: Boolean = false
+        private set
+
+    @JvmStatic fun toggle() { overlayOpen = !overlayOpen; if (!overlayOpen) gameFocus = false }
     @JvmStatic fun ensureOpen() { overlayOpen = true }
-    @JvmStatic fun close() { overlayOpen = false }
+    @JvmStatic fun close() { overlayOpen = false; gameFocus = false }
     @JvmStatic fun isOpen(): Boolean = overlayOpen
 
-    /** Escape: close the topmost panel, else hide the overlay. */
-    @JvmStatic fun onEscape() { if (PanelManager.anyOpen()) PanelManager.closeTop() else overlayOpen = false }
+    /** Escape: leave game focus, else close the topmost panel, else hide the overlay. */
+    @JvmStatic fun onEscape() {
+        when {
+            gameFocus -> exitGameFocus()
+            PanelManager.anyOpen() -> PanelManager.closeTop()
+            else -> { overlayOpen = false; gameFocus = false }
+        }
+    }
+
+    @JvmStatic fun enterGameFocus() {
+        if (gameFocus) return
+        gameFocus = true
+        cursorReleased = false
+        Minecraft.getInstance().mouseHandler.grabMouse()
+    }
+
+    @JvmStatic fun exitGameFocus() {
+        if (!gameFocus) return
+        gameFocus = false
+        Minecraft.getInstance().mouseHandler.releaseMouse()
+        cursorReleased = true
+    }
 
     private fun active(): Boolean = overlayOpen || PanelManager.anyOpen() || ConfirmModal.isOpen()
 
-    /** Single source of truth for the input mixins and the render gate. */
-    @JvmStatic fun isFocused(): Boolean = Compat.screen() == null && active()
+    /** The overlay is drawn (no vanilla screen covers it). */
+    @JvmStatic fun isVisible(): Boolean = Compat.screen() == null && active()
+
+    /** The overlay owns input: visible AND not in game focus. Single source of truth for the input mixins. */
+    @JvmStatic fun isFocused(): Boolean = isVisible() && !gameFocus
 
     private fun reconcileCursor() {
         val mc = Minecraft.getInstance()
-        if (Compat.screen() != null) { cursorReleased = false; return }
-        val shouldRelease = active()
+        if (Compat.screen() != null) { cursorReleased = false; gameFocus = false; return }
+        val shouldRelease = active() && !gameFocus
         if (shouldRelease == cursorReleased) return
         if (shouldRelease) mc.mouseHandler.releaseMouse() else mc.mouseHandler.grabMouse()
         cursorReleased = shouldRelease
@@ -41,8 +71,8 @@ object Overlay {
     fun render() {
         reconcileCursor()
         ImGuiManager.initIfNeeded()
-        if (!ImGuiManager.initialized || !isFocused()) return
-        ImGuiManager.startFrame(true)
+        if (!ImGuiManager.initialized || !isVisible()) { GameViewport.restore(); return }
+        ImGuiManager.startFrame(focused = !gameFocus)
         ThemeApplier.apply()
         try {
             DockHost.render()
@@ -51,6 +81,8 @@ object Overlay {
         } finally {
             ThemeApplier.unapply()
         }
+        GameViewport.composite()   // move the game frame into the central rect, under the panels
         ImGuiManager.endFrame()
+        GameViewport.applySizing() // size Minecraft for the NEXT frame
     }
 }

@@ -47,9 +47,11 @@ public class MouseMixin {
     )
     private void panellib$onButton(long window, int button, int action, int mods, CallbackInfo ci) {
         if (!Overlay.isFocused()) return;
-        // Passthrough: when ImGui doesn't want the mouse (cursor not over a window),
-        // let the click reach the game instead of swallowing it.
-        if (!ImGui.getIO().getWantCaptureMouse()) return;
+        if (!ImGui.getIO().getWantCaptureMouse()) {
+            if (action == 1) Overlay.enterGameFocus();
+            ci.cancel();
+            return;
+        }
         ImGuiManager.mouseButtonCallback(window, button, action, mods);
         ci.cancel();
     }
@@ -62,9 +64,12 @@ public class MouseMixin {
     )
     private void panellib$onButton(long window, MouseButtonInfo mouseButtonInfo, int action, CallbackInfo ci) {
         if (!Overlay.isFocused()) return;
-        // Passthrough: when ImGui doesn't want the mouse (cursor not over a window),
-        // let the click reach the game instead of swallowing it.
-        if (!ImGui.getIO().getWantCaptureMouse()) return;
+        // Click on the game area (no ImGui window under the cursor): hand the game the mouse.
+        if (!ImGui.getIO().getWantCaptureMouse()) {
+            if (action == 1) Overlay.enterGameFocus();
+            ci.cancel();
+            return;
+        }
         ImGuiManager.mouseButtonCallback(window, mouseButtonInfo.button(), action, mouseButtonInfo.modifiers());
         ci.cancel();
     }

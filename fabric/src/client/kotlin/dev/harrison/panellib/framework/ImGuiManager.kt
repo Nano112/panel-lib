@@ -72,6 +72,8 @@ object ImGuiManager {
     fun shutdown() {
         if (!initialized) return
         if (windowHandle != 0L) GLFW.glfwSetCursorEnterCallback(windowHandle, null)?.free()
+        GameViewport.restore()
+        GameViewport.shutdown()
         ImGuiGl3Renderer.shutdown()
         imGuiGlfw.shutdown()
         ImGui.destroyContext()
