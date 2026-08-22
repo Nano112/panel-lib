@@ -19,8 +19,9 @@ Mods that use panel-lib bundle it. To install it standalone, drop the jar for yo
 
 Set `"external_windows": true` (restart the game). Drag a panel's tab out of the dock so it floats, then keep dragging
 it **past the edge of the Minecraft window**: it becomes its own OS window (ImGui multi-viewport, rendered by
-panel-lib with a shared GL context). Drag it back over the game window to merge it again. Verified on macOS;
-Windows/Linux should work the same (GLFW) but are untested, which is why it is opt-in.
+panel-lib with a shared GL context). To re-attach, drag it so it is **fully inside** the game window and release
+(ImGui merges it back). Panels never start detached: on open they are pinned inside the game window.
+Verified on macOS; Windows/Linux should work the same (GLFW) but are untested, which is why it is opt-in.
 
 ## Use it in your mod
 

@@ -15,7 +15,11 @@ object ImGuiManager {
     private var windowHandle = 0L
     /** Opt-in (config `external_windows`): panels dragged outside the game become their own OS windows. */
     @Volatile var externalWindows: Boolean = false
-    private var viewportsActive = false
+    var viewportsActive = false
+        private set
+    /** See PanelLibApi.markSyntheticInput. */
+    @Volatile var lastSyntheticInputAt: Long = 0
+    private fun syntheticRecently() = System.currentTimeMillis() - lastSyntheticInputAt < 2_000
     private const val INI_FILENAME = "panellib-imgui.ini"
 
     /** Unicode codepoints typed since last drain (for custom text widgets that bypass InputText). */
@@ -91,9 +95,10 @@ object ImGuiManager {
             val mh = net.minecraft.client.Minecraft.getInstance().mouseHandler
             if (!viewportsActive) {
                 io.setMousePos(mh.xpos().toFloat(), mh.ypos().toFloat())
-            } else if (!externalWindowHovered()) {
-                // With viewports, MousePos is in desktop coordinates. Override (window pos + MC cursor) unless the
-                // real cursor is over one of OUR external windows, which feed ImGui through their own GLFW callbacks.
+            } else if (syntheticRecently() || !anyOwnWindowHovered()) {
+                // With viewports, MousePos is in desktop coordinates and the GLFW backend tracks the REAL cursor.
+                // Let it, whenever the real cursor is over the game window or one of our external windows (a human
+                // is driving). Only when the real cursor is elsewhere do we feed MC's (possibly synthetic) cursor.
                 val mv = ImGui.getMainViewport()
                 val x = (mv?.posX ?: 0f) + mh.xpos().toFloat(); val y = (mv?.posY ?: 0f) + mh.ypos().toFloat()
                 // The GLFW backend queued the OS cursor position during newFrame; queue ours AFTER it so it wins
@@ -104,8 +109,9 @@ object ImGuiManager {
         }
     }
 
-    /** True when the OS cursor is over one of the secondary (external) viewport windows. */
-    private fun externalWindowHovered(): Boolean {
+    /** True when the OS cursor is over the game window or any of our external viewport windows. */
+    private fun anyOwnWindowHovered(): Boolean {
+        if (GLFW.glfwGetWindowAttrib(windowHandle, GLFW.GLFW_HOVERED) == GLFW.GLFW_TRUE) return true
         val pio = ImGui.getPlatformIO()
         for (i in 1 until pio.viewportsSize) {
             val h = pio.getViewports(i).platformHandle

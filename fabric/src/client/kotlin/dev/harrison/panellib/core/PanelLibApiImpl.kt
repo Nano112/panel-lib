@@ -23,6 +23,7 @@ class PanelLibApiImpl(private val registry: Registry) : PanelLibApi {
     override fun closeTopPanel() = dev.harrison.panellib.framework.PanelManager.closeTop()
     override val anyPanelOpen: Boolean get() = dev.harrison.panellib.framework.PanelManager.anyOpen()
     override fun drainTypedChars(): List<Int> = dev.harrison.panellib.framework.ImGuiManager.drainTypedChars()
+    override fun markSyntheticInput() { dev.harrison.panellib.framework.ImGuiManager.lastSyntheticInputAt = System.currentTimeMillis() }
     override val mods: List<ModHandle> get() = registry.mods()
     override fun panel(fullId: String): PanelHandle? = registry.panel(fullId)
 }

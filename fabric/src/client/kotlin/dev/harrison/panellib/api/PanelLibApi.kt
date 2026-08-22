@@ -39,6 +39,12 @@ interface PanelLibApi {
     /** Unicode code points typed since the last call (for custom text widgets that bypass ImGui InputText). */
     fun drainTypedChars(): List<Int>
 
+    /**
+     * Tell panel-lib that mouse input is being injected programmatically (automation). For ~2 s after each call
+     * the overlay follows Minecraft's cursor instead of the OS cursor, even in external-windows mode.
+     */
+    fun markSyntheticInput()
+
     /** All registered mods in registration order. */
     val mods: List<ModHandle>
     /** Look up a panel by its full id `<modId>:<id>`. */

@@ -14,6 +14,8 @@ object PanelManager : PanelController {
     private val openFlag = ImBoolean(true)
     /** Panels that have been submitted at least once this session (ini-less first show → dock to the side node). */
     private val shownOnce = HashSet<String>()
+    /** Panels still within their first frames after opening: keep them inside the game window (no auto-detach). */
+    private val settling = HashMap<String, Int>()
 
     override fun isOpen(id: String): Boolean = open.containsKey(id)
     override fun open(panel: PanelSpec) {
@@ -30,6 +32,17 @@ object PanelManager : PanelController {
     /** Visible for tests: reset all state. */
     internal fun reset() = open.clear()
 
+    /** Clamp a freshly shown floating window inside the game window so it never starts as an external window. */
+    private fun settle(panel: PanelSpec, frames: Int) {
+        if (!ImGui.isWindowDocked()) ImGui.getMainViewport()?.let { mv ->
+            val x = ImGui.getWindowPosX(); val y = ImGui.getWindowPosY(); val w = ImGui.getWindowWidth(); val h = ImGui.getWindowHeight()
+            val nx = x.coerceIn(mv.posX, maxOf(mv.posX, mv.posX + mv.sizeX - w)); val ny = y.coerceIn(mv.posY, maxOf(mv.posY, mv.posY + mv.sizeY - h))
+            PanelLibLog.LOGGER.debug("[panel-lib] settle {}: pos=({},{}) size=({},{}) main=({},{} {}x{}) -> ({},{})", panel.id, x, y, w, h, mv.posX, mv.posY, mv.sizeX, mv.sizeY, nx, ny)
+            if (nx != x || ny != y) ImGui.setWindowPos(nx, ny)
+        }
+        if (frames <= 1) settling.remove(panel.id) else settling[panel.id] = frames - 1
+    }
+
     fun renderAll() {
         for (panel in open.values.toList()) {
             openFlag.set(true)
@@ -37,7 +50,12 @@ object PanelManager : PanelController {
                 // FirstUseEver: a window with saved ini settings keeps them; a brand-new one docks to the side.
                 val side = DockHost.sideNodeId()
                 if (side != 0) imgui.internal.ImGui.setNextWindowDockID(side, imgui.flag.ImGuiCond.FirstUseEver)
+                settling[panel.id] = 3
             }
+            // A panel never starts detached: while settling, pin it to the game window's viewport. (Raw panels do
+            // their own begin; the pin still applies to their next window.)
+            val settleFrames = settling[panel.id]
+            if (settleFrames != null && ImGuiManager.viewportsActive) ImGui.getMainViewport()?.let { ImGui.setNextWindowViewport(it.id) }
             if (!panel.managed) {
                 // Raw panel: the consumer owns begin/end and closes itself through its handle.
                 try { panel.render() } catch (t: Throwable) {
@@ -46,6 +64,7 @@ object PanelManager : PanelController {
                 continue
             }
             val shown = ImGui.begin(panel.windowLabel, openFlag, panel.flags)
+            if (settleFrames != null) settle(panel, settleFrames)
             try {
                 if (shown) {
                     try { panel.render() } catch (t: Throwable) { PanelErrors.render(panel, t) }
