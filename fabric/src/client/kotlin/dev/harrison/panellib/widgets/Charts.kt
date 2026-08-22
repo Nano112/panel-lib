@@ -46,6 +46,9 @@ object Charts {
             dl.addText(cx - 14f, cy - 7f, u32(t.textFaint), "no data")
         } else {
             var a0 = -PI.toFloat() / 2
+            // Adjacent AA-filled quads show hairline seams; fill without AA and draw one AA outline per slice.
+            val savedFlags = dl.flags
+            dl.flags = savedFlags and imgui.flag.ImDrawListFlags.AntiAliasedFill.inv()
             val mdx = mx - cx; val mdy = my - cy
             val mdist = kotlin.math.sqrt(mdx * mdx + mdy * mdy)
             val mAngle = (kotlin.math.atan2(mdy, mdx) + 2 * PI.toFloat() + PI.toFloat() / 2) % (2 * PI.toFloat())
@@ -57,18 +60,36 @@ object Charts {
                 val isHover = mdist <= radius && mdist >= radius * hole && mAngle >= acc && mAngle < acc + sweep
                 if (isHover) hovered = s.label
                 val r = if (isHover) radius + 3f else radius
-                val segs = maxOf(4, (sweep / (2 * PI.toFloat()) * 64).toInt())
-                dl.pathClear()
-                if (hole > 0f) {
-                    dl.pathArcTo(cx, cy, radius * hole, a0, a1, segs)
-                    dl.pathArcTo(cx, cy, r, a1, a0, segs)
-                } else {
-                    dl.pathLineTo(cx, cy)
-                    dl.pathArcTo(cx, cy, r, a0, a1, segs)
+                val ri = radius * hole
+                val col = u32(s.color, if (isHover) 1f else 0.9f)
+                // An annular sector is not convex: fill it as a fan of small quads (≤ 6° each), each of which is.
+                val steps = maxOf(2, (sweep / (PI.toFloat() / 30f)).toInt() + 1)
+                val segs = steps * 2
+                for (k in 0 until steps) {
+                    val b0 = a0 + sweep * k / steps; val b1 = a0 + sweep * (k + 1) / steps
+                    dl.pathClear()
+                    if (hole > 0f) {
+                        dl.pathLineTo(cx + cos(b0) * ri, cy + sin(b0) * ri)
+                        dl.pathLineTo(cx + cos(b0) * r, cy + sin(b0) * r)
+                        dl.pathLineTo(cx + cos(b1) * r, cy + sin(b1) * r)
+                        dl.pathLineTo(cx + cos(b1) * ri, cy + sin(b1) * ri)
+                    } else {
+                        dl.pathLineTo(cx, cy)
+                        dl.pathLineTo(cx + cos(b0) * r, cy + sin(b0) * r)
+                        dl.pathLineTo(cx + cos(b1) * r, cy + sin(b1) * r)
+                    }
+                    dl.pathFillConvex(col)
                 }
-                dl.pathFillConvex(u32(s.color, if (isHover) 1f else 0.9f))
+                // AA outline of the whole slice (outer arc, edge, inner arc, edge).
+                dl.flags = savedFlags
+                dl.pathClear()
+                dl.pathArcTo(cx, cy, r, a0, a1, segs)
+                if (hole > 0f) dl.pathArcTo(cx, cy, ri, a1, a0, segs) else dl.pathLineTo(cx, cy)
+                dl.pathStroke(col, imgui.flag.ImDrawFlags.Closed, 1.2f)
+                dl.flags = savedFlags and imgui.flag.ImDrawListFlags.AntiAliasedFill.inv()
                 a0 = a1; acc += sweep
             }
+            dl.flags = savedFlags
             // Slice borders in bg colour so adjacent colours separate.
             var b0 = -PI.toFloat() / 2
             for (s in slices) {
