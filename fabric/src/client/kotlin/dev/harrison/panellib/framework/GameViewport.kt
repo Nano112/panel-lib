@@ -73,11 +73,15 @@ object GameViewport {
         (mc.window as WindowAccessor).`panellib$onFramebufferResize`(dev.harrison.panellib.compat.Compat.windowHandle(), w, h)
     }
 
+    /** Debug aid: `-Dpanellib.noComposite=true` leaves FBO 0 untouched so the raw presented frame can be inspected. */
+    private val noComposite = System.getProperty("panellib.noComposite") == "true"
+
     /**
-     * FBO 0 holds the game frame at the bottom-left [spoofW]×[spoofH]. Copy it out, paint the background,
-     * and put it back at the central rect. Runs before ImGui draws so panels end up on top of the bars.
+     * FBO 0 holds the game frame at [spoofW]×[spoofH] (corner depends on the version, see below). Copy it
+     * out, paint the background, and put it back at the central rect. Runs before ImGui draws.
      */
     fun composite() {
+        if (noComposite) return
         val rect = central ?: return
         if (!isActive || spoofW != mc.window.width || spoofH != mc.window.height) return
         val (fw, fh) = realFramebufferSize()
@@ -90,10 +94,16 @@ object GameViewport {
         val clear = FloatArray(4).also { GL11.glGetFloatv(GL11.GL_COLOR_CLEAR_VALUE, it) }
         try {
             GL11.glDisable(GL11.GL_SCISSOR_TEST)
-            // 1. game (bottom-left of FBO 0) → our texture
+            // 1. game → our texture. 1.21.x's RenderTarget.blitToScreen draws at the bottom-left of FBO 0;
+            //    26.2's GlSurface.presentTexture draws at the TOP-left (GL y = fh - spoofH).
+            //? if >=26.2 {
+            /*val srcY0 = fh - spoofH
+            *///?} else {
+            val srcY0 = 0
+            //?}
             GL30.glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, 0)
             GL30.glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, fbo)
-            GL30.glBlitFramebuffer(0, 0, spoofW, spoofH, 0, 0, spoofW, spoofH, GL11.GL_COLOR_BUFFER_BIT, GL11.GL_NEAREST)
+            GL30.glBlitFramebuffer(0, srcY0, spoofW, srcY0 + spoofH, 0, 0, spoofW, spoofH, GL11.GL_COLOR_BUFFER_BIT, GL11.GL_NEAREST)
             // 2. clear the whole window to the theme background
             GL30.glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, 0)
             val bg = Theme.current.bg
