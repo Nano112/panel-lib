@@ -42,11 +42,10 @@ public class GlSurfaceMixin {
         require = 1
     )
     private void panellib_renderImGuiBeforePresent(CallbackInfo ci) {
-        // Guard: skip if a vanilla Screen is open (it handles its own rendering).
-        // 26.2 moved screen management from Minecraft onto Gui.
-        if (dev.harrison.panellib.compat.Compat.screen() != null) return;
         // ImGuiManager.endFrame() binds FBO 0 + sets the window viewport before
         // renderDrawData, so ImGui geometry lands on the default framebuffer.
+        // Always call: Overlay.render() suspends itself while a vanilla Screen is open AND restores the real
+        // window size (embedded-game mode) — skipping it here left Minecraft rendering at the embedded size.
         Overlay.render();
     }
     *///?}

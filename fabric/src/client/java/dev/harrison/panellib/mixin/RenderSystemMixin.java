@@ -51,9 +51,9 @@ public class RenderSystemMixin {
     //? if <1.21.9 {
     /*@Inject(method = "flipFrame", at = @At("HEAD"), require = 1)
     private static void panellib_renderImGuiBeforePresent(long window, TracyFrameCapture frameCapture, CallbackInfo ci) {
-        // Skip while a vanilla Screen is open (it handles its own rendering + cursor).
-        if (dev.harrison.panellib.compat.Compat.screen() != null) return;
         // ImGuiManager.endFrame() binds FBO 0 + sets the window viewport before renderDrawData.
+        // Always call: Overlay.render() suspends itself while a vanilla Screen is open AND restores the real
+        // window size (embedded-game mode) — skipping it here left Minecraft rendering at the embedded size.
         Overlay.render();
     }
     *///?}
@@ -61,9 +61,9 @@ public class RenderSystemMixin {
     //? if >=1.21.9 && <26.1 {
     @Inject(method = "flipFrame", at = @At("HEAD"), require = 1)
     private static void panellib_renderImGuiBeforePresent(Window window, TracyFrameCapture frameCapture, CallbackInfo ci) {
-        // Skip while a vanilla Screen is open (it handles its own rendering + cursor).
-        if (dev.harrison.panellib.compat.Compat.screen() != null) return;
         // ImGuiManager.endFrame() binds FBO 0 + sets the window viewport before renderDrawData.
+        // Always call: Overlay.render() suspends itself while a vanilla Screen is open AND restores the real
+        // window size (embedded-game mode) — skipping it here left Minecraft rendering at the embedded size.
         Overlay.render();
     }
     //?}
@@ -71,9 +71,9 @@ public class RenderSystemMixin {
     //? if >=26.1 && <26.2 {
     /*@Inject(method = "flipFrame", at = @At("HEAD"), require = 1)
     private static void panellib_renderImGuiBeforePresent(TracyFrameCapture frameCapture, CallbackInfo ci) {
-        // Skip while a vanilla Screen is open (it handles its own rendering + cursor).
-        if (dev.harrison.panellib.compat.Compat.screen() != null) return;
         // ImGuiManager.endFrame() binds FBO 0 + sets the window viewport before renderDrawData.
+        // Always call: Overlay.render() suspends itself while a vanilla Screen is open AND restores the real
+        // window size (embedded-game mode) — skipping it here left Minecraft rendering at the embedded size.
         Overlay.render();
     }
     *///?}
