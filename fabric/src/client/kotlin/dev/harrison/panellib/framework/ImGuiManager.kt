@@ -13,6 +13,9 @@ object ImGuiManager {
     private val imGuiGlfw = ImGuiImplGlfw()
     @Volatile var initialized = false; private set
     private var windowHandle = 0L
+    /** Opt-in (config `external_windows`): panels dragged outside the game become their own OS windows. */
+    @Volatile var externalWindows: Boolean = false
+    private var viewportsActive = false
     private const val INI_FILENAME = "panellib-imgui.ini"
 
     /** Unicode codepoints typed since last drain (for custom text widgets that bypass InputText). */
@@ -32,6 +35,14 @@ object ImGuiManager {
             // Docking ON (full-viewport DockHost + dockable panels; layout persisted in the ini).
             // Multi-viewport stays OFF: single overlay into MC's framebuffer.
             io.addConfigFlags(ImGuiConfigFlags.DockingEnable)
+            if (externalWindows) {
+                // Multi-viewport: ImGui's GLFW backend creates secondary windows (sharing MC's GL context);
+                // we render each one with our renderer from Renderer_RenderWindow.
+                io.addConfigFlags(ImGuiConfigFlags.ViewportsEnable)
+                io.configViewportsNoAutoMerge = false
+                io.configViewportsNoTaskBarIcon = true
+                viewportsActive = true
+            }
             io.fonts.clear()
             Fonts.load(io, pixelRatio = pixelRatio(wh))
             imGuiGlfw.init(wh, false) // installCallbacks=false; our mixins forward input
@@ -41,6 +52,15 @@ object ImGuiManager {
             GLFW.glfwSetCursorEnterCallback(wh) { _, entered -> imGuiGlfw.cursorEnterCallback(wh, entered) }
             // Our renderer is the sole owner of the font atlas texture (see ImGuiGl3Renderer).
             ImGuiGl3Renderer.initIfNeeded()
+            if (viewportsActive) {
+                val pio = ImGui.getPlatformIO()
+                pio.setRendererRenderWindow(object : imgui.callback.ImPlatformFuncViewport() {
+                    override fun accept(vp: imgui.ImGuiViewport) { ImGuiGl3Renderer.renderViewport(vp.platformHandle, vp.drawData) }
+                })
+                pio.setRendererDestroyWindow(object : imgui.callback.ImPlatformFuncViewport() {
+                    override fun accept(vp: imgui.ImGuiViewport) { ImGuiGl3Renderer.forgetViewport(vp.platformHandle) }
+                })
+            }
             initialized = true
             PanelLibLog.LOGGER.info("[panel-lib] ImGui initialised")
         } catch (e: Throwable) {
@@ -67,13 +87,27 @@ object ImGuiManager {
             // it is always valid, and synthetic input injected at the MouseHandler level (automation,
             // MC-Inspector's MCP host) moves it while the OS cursor stays put.
             val mh = net.minecraft.client.Minecraft.getInstance().mouseHandler
-            io.setMousePos(mh.xpos().toFloat(), mh.ypos().toFloat())
+            if (!viewportsActive) {
+                io.setMousePos(mh.xpos().toFloat(), mh.ypos().toFloat())
+            } else if (ImGui.getPlatformIO().viewportsSize <= 1 || GLFW.glfwGetWindowAttrib(windowHandle, GLFW.GLFW_HOVERED) == GLFW.GLFW_TRUE) {
+                // With viewports, MousePos is in desktop coordinates; override while no external window exists
+                // or the cursor is over the game window (external windows are fed by their own GLFW callbacks).
+                val wx = IntArray(1); val wy = IntArray(1)
+                GLFW.glfwGetWindowPos(windowHandle, wx, wy)
+                io.setMousePos(wx[0] + mh.xpos().toFloat(), wy[0] + mh.ypos().toFloat())
+            }
         }
     }
 
     fun endFrame() {
         ImGui.render()
         ImGuiGl3Renderer.render(ImGui.getDrawData())
+        if (viewportsActive) {
+            // Create/move/render the external windows, then give Minecraft its context back.
+            ImGui.updatePlatformWindows()
+            ImGui.renderPlatformWindowsDefault()
+            GLFW.glfwMakeContextCurrent(windowHandle)
+        }
     }
 
     fun shutdown() {

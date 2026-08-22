@@ -47,6 +47,41 @@ object ImGuiGl3Renderer {
     private var uniformProjMtx = 0
     private var uniformTexture = 0
     private var vao = 0
+    private var attribs = IntArray(3)
+    /** VAOs are not shared between GL contexts: one per external viewport window (keyed by GLFW handle). */
+    private val viewportVaos = HashMap<Long, Int>()
+
+    /** Build a VAO for the CURRENT context over the shared VBO/EBO. */
+    private fun createVao(): Int {
+        val id = GL30.glGenVertexArrays()
+        GL30.glBindVertexArray(id)
+        GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, vbo)
+        GL15.glBindBuffer(GL15.GL_ELEMENT_ARRAY_BUFFER, ebo)
+        GL20.glEnableVertexAttribArray(attribs[0]); GL20.glEnableVertexAttribArray(attribs[1]); GL20.glEnableVertexAttribArray(attribs[2])
+        // pos: 2 floats @0; uv: 2 floats @8; color: 4 unsigned bytes (normalized) @16.
+        GL20.glVertexAttribPointer(attribs[0], 2, GL11.GL_FLOAT, false, vertexSize, 0L)
+        GL20.glVertexAttribPointer(attribs[1], 2, GL11.GL_FLOAT, false, vertexSize, 8L)
+        GL20.glVertexAttribPointer(attribs[2], 4, GL11.GL_UNSIGNED_BYTE, true, vertexSize, 16L)
+        GL30.glBindVertexArray(0)
+        GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, 0)
+        GL15.glBindBuffer(GL15.GL_ELEMENT_ARRAY_BUFFER, 0)
+        return id
+    }
+
+    /**
+     * Render an external viewport window's draw data. Called from ImGui's Renderer_RenderWindow with that
+     * window's GL context current (GLFW backend made it current). Clears the window to the theme bg first.
+     */
+    fun renderViewport(windowHandle: Long, drawData: ImDrawData) {
+        if (!initialized) return
+        val vpVao = viewportVaos.getOrPut(windowHandle) { createVao() }
+        val bg = dev.harrison.panellib.theme.Theme.current.bg
+        GL11.glClearColor(bg.x, bg.y, bg.z, 1f)
+        GL11.glClear(GL11.GL_COLOR_BUFFER_BIT)
+        render(drawData, vpVao)
+    }
+
+    fun forgetViewport(windowHandle: Long) { viewportVaos.remove(windowHandle) }
     private var vbo = 0
     private var ebo = 0
     var fontTextureId = 0  // OUR GL texture for the font atlas (GL_LINEAR, GL_RGBA8, GL_CLAMP_TO_EDGE)
@@ -106,23 +141,10 @@ object ImGuiGl3Renderer {
         val attribUV = GL20.glGetAttribLocation(program, "UV")
         val attribColor = GL20.glGetAttribLocation(program, "Color")
 
-        vao = GL30.glGenVertexArrays()
         vbo = GL15.glGenBuffers()
         ebo = GL15.glGenBuffers()
-
-        GL30.glBindVertexArray(vao)
-        GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, vbo)
-        GL15.glBindBuffer(GL15.GL_ELEMENT_ARRAY_BUFFER, ebo)
-        GL20.glEnableVertexAttribArray(attribPos)
-        GL20.glEnableVertexAttribArray(attribUV)
-        GL20.glEnableVertexAttribArray(attribColor)
-        // pos: 2 floats @0; uv: 2 floats @8; color: 4 unsigned bytes (normalized) @16.
-        GL20.glVertexAttribPointer(attribPos, 2, GL11.GL_FLOAT, false, vertexSize, 0L)
-        GL20.glVertexAttribPointer(attribUV, 2, GL11.GL_FLOAT, false, vertexSize, 8L)
-        GL20.glVertexAttribPointer(attribColor, 4, GL11.GL_UNSIGNED_BYTE, true, vertexSize, 16L)
-        GL30.glBindVertexArray(0)
-        GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, 0)
-        GL15.glBindBuffer(GL15.GL_ELEMENT_ARRAY_BUFFER, 0)
+        attribs = intArrayOf(attribPos, attribUV, attribColor)
+        vao = createVao()
 
         // Build OUR font atlas texture with explicit GL_LINEAR + GL_RGBA8 + GL_CLAMP_TO_EDGE.
         // We do NOT rely on imgui-java's ImGuiImplGl3.createFontsTexture() result because Apple's
@@ -195,7 +217,9 @@ object ImGuiGl3Renderer {
      * have bound FBO 0 and the framebuffer-sized viewport. We set/clear only the GL state we need
      * and leave a clean baseline (program 0, VAO 0, blend disabled, scissor disabled).
      */
-    fun render(drawData: ImDrawData) {
+    fun render(drawData: ImDrawData) = render(drawData, vao)
+
+    private fun render(drawData: ImDrawData, useVao: Int) {
         if (!initialized) return
         val fbWidth = (drawData.displaySizeX * drawData.framebufferScaleX).toInt()
         val fbHeight = (drawData.displaySizeY * drawData.framebufferScaleY).toInt()
@@ -283,7 +307,7 @@ object ImGuiGl3Renderer {
         // Apple marks it unloadable → black overlay. glBindSampler(0, 0) is a no-op when no sampler is
         // bound, and matches what the official Dear ImGui GL3 backend does in setupRenderState.
         GL33.glBindSampler(0, 0)
-        GL30.glBindVertexArray(vao)
+        GL30.glBindVertexArray(useVao)
 
         val clipOffX = drawData.displayPosX
         val clipOffY = drawData.displayPosY

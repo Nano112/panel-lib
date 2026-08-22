@@ -28,6 +28,7 @@ object PanelLibClient : ClientModInitializer {
         Theme.current = theme
 
         dev.harrison.panellib.framework.GameViewport.enabled = config.embedGame
+        ImGuiManager.externalWindows = config.externalWindows
         Keybinds.registerBuiltins()
         val registry = Registry(PanelManager, Keybinds)
         Toolbar.bind(registry)
