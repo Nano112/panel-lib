@@ -33,7 +33,7 @@ object ImGuiManager {
             // Multi-viewport stays OFF: single overlay into MC's framebuffer.
             io.addConfigFlags(ImGuiConfigFlags.DockingEnable)
             io.fonts.clear()
-            Fonts.load(io)
+            Fonts.load(io, pixelRatio = pixelRatio(wh))
             imGuiGlfw.init(wh, false) // installCallbacks=false; our mixins forward input
             // ImGuiImplGlfw only polls the cursor when mouseWindow != -1, which only a cursor-enter
             // callback sets; with installCallbacks=false we must prime it and keep it updated.
@@ -46,6 +46,13 @@ object ImGuiManager {
         } catch (e: Throwable) {
             PanelLibLog.LOGGER.error("[panel-lib] ImGui init failed; overlay disabled", e)
         }
+    }
+
+    /** Framebuffer px per logical window unit (2 on Retina), from GLFW. */
+    private fun pixelRatio(window: Long): Float {
+        val fw = IntArray(1); val fh = IntArray(1); val ww = IntArray(1); val whh = IntArray(1)
+        GLFW.glfwGetFramebufferSize(window, fw, fh); GLFW.glfwGetWindowSize(window, ww, whh)
+        return if (ww[0] > 0) fw[0].toFloat() / ww[0] else 1f
     }
 
     fun startFrame(focused: Boolean) {

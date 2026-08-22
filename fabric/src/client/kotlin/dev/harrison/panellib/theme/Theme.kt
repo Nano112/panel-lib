@@ -64,17 +64,17 @@ data class Theme(
     val scrim: ImVec4,
     val stripe: ImVec4,
     // metrics
-    val windowPadding: Float = 12f,
-    val framePaddingX: Float = 9f,
-    val framePaddingY: Float = 6f,
-    val itemSpacingX: Float = 8f,
-    val itemSpacingY: Float = 6f,
-    val windowRounding: Float = 6f,
-    val frameRounding: Float = 4f,
-    val popupRounding: Float = 6f,
-    val scrollbarSize: Float = 10f,
-    /** Base font size in pixels (body + semibold). Headings scale from it. */
-    val fontSize: Float = 17f,
+    val windowPadding: Float = 8f,
+    val framePaddingX: Float = 7f,
+    val framePaddingY: Float = 4f,
+    val itemSpacingX: Float = 6f,
+    val itemSpacingY: Float = 4f,
+    val windowRounding: Float = 4f,
+    val frameRounding: Float = 3f,
+    val popupRounding: Float = 4f,
+    val scrollbarSize: Float = 8f,
+    /** Base font size in logical px (body + semibold). Headings scale from it. */
+    val fontSize: Float = 14f,
 ) {
     companion object {
         val TRANSPARENT = ImVec4(0f, 0f, 0f, 0f)

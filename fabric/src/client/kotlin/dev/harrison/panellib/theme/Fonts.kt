@@ -22,18 +22,25 @@ object Fonts {
     /** Inter SemiBold, +7px — panel titles. */
     var H1: ImFont? = null; private set
 
-    fun load(io: ImGuiIO, base: Float = Theme.current.fontSize) {
+    /**
+     * [pixelRatio] = framebuffer px per logical unit (2 on Retina). Glyphs are rasterised at
+     * `size × ratio` and drawn at `1/ratio` so text is pixel-sharp on HiDPI instead of upscaled.
+     */
+    fun load(io: ImGuiIO, base: Float = Theme.current.fontSize, pixelRatio: Float = 1f) {
         val regular = res("$DIR/Inter-Regular.ttf")
         val semibold = res("$DIR/Inter-SemiBold.ttf")
         val icons = res("$DIR/fa-solid-900.ttf")
+        val r = pixelRatio.coerceIn(1f, 4f)
+        fun px(logical: Float) = (logical * r).let { kotlin.math.round(it) }
 
-        BODY = io.fonts.addFontFromMemoryTTF(regular, base)
-        mergeIcons(io, icons, base)
-        SEMIBOLD = io.fonts.addFontFromMemoryTTF(semibold, base)
-        mergeIcons(io, icons, base)
-        H2 = io.fonts.addFontFromMemoryTTF(semibold, base + 3f)
-        H1 = io.fonts.addFontFromMemoryTTF(semibold, base + 7f)
+        BODY = io.fonts.addFontFromMemoryTTF(regular, px(base))
+        mergeIcons(io, icons, px(base))
+        SEMIBOLD = io.fonts.addFontFromMemoryTTF(semibold, px(base))
+        mergeIcons(io, icons, px(base))
+        H2 = io.fonts.addFontFromMemoryTTF(semibold, px(base + 3f))
+        H1 = io.fonts.addFontFromMemoryTTF(semibold, px(base + 7f))
         io.fonts.build()
+        io.fontGlobalScale = 1f / r
     }
 
     private fun mergeIcons(io: ImGuiIO, bytes: ByteArray, size: Float) {
