@@ -53,6 +53,8 @@ object ImGuiManager {
             // Our renderer is the sole owner of the font atlas texture (see ImGuiGl3Renderer).
             ImGuiGl3Renderer.initIfNeeded()
             if (viewportsActive) {
+                // Tell ImGui our renderer can draw secondary viewports (the GLFW backend sets PlatformHasViewports).
+                io.addBackendFlags(imgui.flag.ImGuiBackendFlags.RendererHasViewports)
                 val pio = ImGui.getPlatformIO()
                 pio.setRendererRenderWindow(object : imgui.callback.ImPlatformFuncViewport() {
                     override fun accept(vp: imgui.ImGuiViewport) { ImGuiGl3Renderer.renderViewport(vp.platformHandle, vp.drawData) }
@@ -89,14 +91,27 @@ object ImGuiManager {
             val mh = net.minecraft.client.Minecraft.getInstance().mouseHandler
             if (!viewportsActive) {
                 io.setMousePos(mh.xpos().toFloat(), mh.ypos().toFloat())
-            } else if (ImGui.getPlatformIO().viewportsSize <= 1 || GLFW.glfwGetWindowAttrib(windowHandle, GLFW.GLFW_HOVERED) == GLFW.GLFW_TRUE) {
-                // With viewports, MousePos is in desktop coordinates; override while no external window exists
-                // or the cursor is over the game window (external windows are fed by their own GLFW callbacks).
-                val wx = IntArray(1); val wy = IntArray(1)
-                GLFW.glfwGetWindowPos(windowHandle, wx, wy)
-                io.setMousePos(wx[0] + mh.xpos().toFloat(), wy[0] + mh.ypos().toFloat())
+            } else if (!externalWindowHovered()) {
+                // With viewports, MousePos is in desktop coordinates. Override (window pos + MC cursor) unless the
+                // real cursor is over one of OUR external windows, which feed ImGui through their own GLFW callbacks.
+                val mv = ImGui.getMainViewport()
+                val x = (mv?.posX ?: 0f) + mh.xpos().toFloat(); val y = (mv?.posY ?: 0f) + mh.ypos().toFloat()
+                // The GLFW backend queued the OS cursor position during newFrame; queue ours AFTER it so it wins
+                // when the input queue is drained next frame (setMousePos alone would be overwritten).
+                io.setMousePos(x, y)
+                io.addMousePosEvent(x, y)
             }
         }
+    }
+
+    /** True when the OS cursor is over one of the secondary (external) viewport windows. */
+    private fun externalWindowHovered(): Boolean {
+        val pio = ImGui.getPlatformIO()
+        for (i in 1 until pio.viewportsSize) {
+            val h = pio.getViewports(i).platformHandle
+            if (h != 0L && GLFW.glfwGetWindowAttrib(h, GLFW.GLFW_HOVERED) == GLFW.GLFW_TRUE) return true
+        }
+        return false
     }
 
     fun endFrame() {

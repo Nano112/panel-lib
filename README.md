@@ -13,8 +13,14 @@ Mods that use panel-lib bundle it. To install it standalone, drop the jar for yo
 [Releases](https://github.com/Nano112/panel-lib/releases) into `mods/` (needs Fabric API + Fabric Language Kotlin).
 
 - **K** toggles the overlay · click the game area to play, **Esc** returns to the panels · **Layout ▾** resets the layout.
-- `config/panellib.json`: `accent` (`#hex`), `font_size` (14), `embed_game`, `external_windows` (**experimental**, off:
-  ImGui multi-viewport so panels dragged out of the game become OS windows — renders, but hover/layout in this mode still need work).
+- `config/panellib.json`: `accent` (`#hex`), `font_size` (14), `embed_game`, `external_windows`.
+
+### External windows
+
+Set `"external_windows": true` (restart the game). Drag a panel's tab out of the dock so it floats, then keep dragging
+it **past the edge of the Minecraft window**: it becomes its own OS window (ImGui multi-viewport, rendered by
+panel-lib with a shared GL context). Drag it back over the game window to merge it again. Verified on macOS;
+Windows/Linux should work the same (GLFW) but are untested, which is why it is opt-in.
 
 ## Use it in your mod
 

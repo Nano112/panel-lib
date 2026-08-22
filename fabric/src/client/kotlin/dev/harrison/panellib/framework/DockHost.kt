@@ -89,8 +89,12 @@ object DockHost {
         maybeBuildDefaultLayout(dockId)
         // Where the game lives this frame (embedded mode renders Minecraft into exactly this rectangle).
         val central = imgui.internal.ImGui.dockBuilderGetCentralNode(dockId)
-        if (central.ptr != 0L) GameViewport.setCentralFromLogical(central.posX, central.posY, central.sizeX, central.sizeY)
-        else GameViewport.central = null
+        if (central.ptr != 0L) {
+            // With multi-viewports ImGui positions are desktop coordinates: make them window-local.
+            val mv = ImGui.getMainViewport()
+            val ox = mv?.posX ?: 0f; val oy = mv?.posY ?: 0f
+            GameViewport.setCentralFromLogical(central.posX - ox, central.posY - oy, central.sizeX, central.sizeY)
+        } else GameViewport.central = null
 
         ImGui.end()
         ImGui.popStyleVar(2)
