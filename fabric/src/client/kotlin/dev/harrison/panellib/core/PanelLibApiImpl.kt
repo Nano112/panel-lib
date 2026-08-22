@@ -20,6 +20,9 @@ class PanelLibApiImpl(private val registry: Registry) : PanelLibApi {
     override val isOverlayFocused: Boolean get() = Overlay.isFocused()
     override fun confirm(title: String, message: String, confirmLabel: String, danger: Boolean, onConfirm: () -> Unit) =
         ConfirmModal.show(title, message, confirmLabel, danger, onConfirm)
+    override fun closeTopPanel() = dev.harrison.panellib.framework.PanelManager.closeTop()
+    override val anyPanelOpen: Boolean get() = dev.harrison.panellib.framework.PanelManager.anyOpen()
+    override fun drainTypedChars(): List<Int> = dev.harrison.panellib.framework.ImGuiManager.drainTypedChars()
     override val mods: List<ModHandle> get() = registry.mods()
     override fun panel(fullId: String): PanelHandle? = registry.panel(fullId)
 }

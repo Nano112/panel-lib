@@ -53,7 +53,8 @@ object Overlay {
         cursorReleased = true
     }
 
-    private fun active(): Boolean = overlayOpen || PanelManager.anyOpen() || ConfirmModal.isOpen()
+    private fun active(): Boolean = overlayOpen || PanelManager.anyOpen() || ConfirmModal.isOpen() ||
+        runCatching { Toolbar.registry().frameHooks().any { it.keepsOverlayOpen() } }.getOrDefault(false)
 
     /** The overlay is drawn (no vanilla screen covers it). */
     @JvmStatic fun isVisible(): Boolean = Compat.screen() == null && active()
@@ -80,6 +81,9 @@ object Overlay {
         try {
             DockHost.render()
             PanelManager.renderAll()
+            for (hook in Toolbar.registry().frameHooks()) {
+                try { hook.render() } catch (t: Throwable) { PanelLibLog.LOGGER.error("[panel-lib] frame hook threw", t) }
+            }
             ConfirmModal.render()
         } finally {
             ThemeApplier.unapply()

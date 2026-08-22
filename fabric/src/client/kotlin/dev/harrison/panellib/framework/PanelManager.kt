@@ -38,6 +38,13 @@ object PanelManager : PanelController {
                 val side = DockHost.sideNodeId()
                 if (side != 0) imgui.internal.ImGui.setNextWindowDockID(side, imgui.flag.ImGuiCond.FirstUseEver)
             }
+            if (!panel.managed) {
+                // Raw panel: the consumer owns begin/end and closes itself through its handle.
+                try { panel.render() } catch (t: Throwable) {
+                    PanelLibLog.LOGGER.error("[panel-lib] raw panel '{}' threw; closing it", panel.id, t); close(panel.id)
+                }
+                continue
+            }
             val shown = ImGui.begin(panel.windowLabel, openFlag, panel.flags)
             try {
                 if (shown) {

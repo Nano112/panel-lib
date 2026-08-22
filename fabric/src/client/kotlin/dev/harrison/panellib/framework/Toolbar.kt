@@ -39,13 +39,17 @@ object Toolbar {
             }
             if (open) {
                 for (p in mod.panelSpecs) {
+                    if (!p.listed) continue
                     val pl = (p.icon?.let { "$it  " } ?: "") + p.title + "##panel-" + p.id
                     if (ImGui.menuItem(pl, "", p.isOpen)) p.toggle()
                 }
                 if (mod.panelSpecs.isNotEmpty() && mod.menu.isNotEmpty()) ImGui.separator()
                 for (e in mod.menu) when (e) {
                     is MenuEntry.Separator -> ImGui.separator()
-                    is MenuEntry.Item -> if (ImGui.menuItem((e.icon?.let { "$it  " } ?: "") + e.label)) e.action()
+                    is MenuEntry.Item -> if (e.visible()) {
+                        val enabled = e.enabled()
+                        if (ImGui.menuItem((e.icon?.let { "$it  " } ?: "") + e.label, "", false, enabled) && enabled) e.action()
+                    }
                 }
                 ImGui.endMenu()
             }

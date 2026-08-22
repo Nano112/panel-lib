@@ -32,6 +32,13 @@ interface PanelLibApi {
 
     fun confirm(title: String, message: String, confirmLabel: String = "Confirm", danger: Boolean = false, onConfirm: () -> Unit)
 
+    /** Close the most recently opened panel (what Escape does first). */
+    fun closeTopPanel()
+    val anyPanelOpen: Boolean
+
+    /** Unicode code points typed since the last call (for custom text widgets that bypass ImGui InputText). */
+    fun drainTypedChars(): List<Int>
+
     /** All registered mods in registration order. */
     val mods: List<ModHandle>
     /** Look up a panel by its full id `<modId>:<id>`. */
@@ -48,11 +55,25 @@ interface ModHandle {
      * Declare a dockable panel. panel-lib owns the window (`ImGui.begin/end`, close button,
      * docking); [render] draws only the content. [flags] are extra ImGuiWindowFlags.
      */
-    fun panel(id: String, title: String, icon: String? = null, flags: Int = 0, render: () -> Unit): PanelHandle
+    fun panel(id: String, title: String, icon: String? = null, flags: Int = 0, listed: Boolean = true, render: () -> Unit): PanelHandle
 
-    /** Extra entry in this mod's toolbar menu (below its panels). */
-    fun menuItem(label: String, icon: String? = null, action: () -> Unit)
+    /**
+     * A panel that draws its OWN window: [render] must call `ImGui.begin(...)`/`ImGui.end()` itself (useful for
+     * dynamic titles or ports of existing code) and should call [PanelHandle.close] when its close box is hit.
+     * panel-lib still tracks open state, lists it in the menu (unless [listed] is false — for panels that need
+     * context, e.g. a detail view), docks it on first show and closes it on Escape.
+     */
+    fun rawPanel(id: String, title: String, icon: String? = null, listed: Boolean = true, render: () -> Unit): PanelHandle
+
+    /** Extra entry in this mod's toolbar menu (below its panels). [visible]/[enabled] are evaluated every frame. */
+    fun menuItem(label: String, icon: String? = null, visible: () -> Boolean = { true }, enabled: () -> Boolean = { true }, action: () -> Unit)
     fun menuSeparator()
+
+    /**
+     * Runs every overlay frame after the panels (global popups, modals). While [keepsOverlayOpen] returns true the
+     * overlay stays active even with no panels open (e.g. a popup is showing).
+     */
+    fun frameHook(keepsOverlayOpen: () -> Boolean = { false }, render: () -> Unit)
 
     /**
      * Register a key binding under the "panel-lib" controls category. Translation key is
@@ -64,6 +85,8 @@ interface ModHandle {
 interface PanelHandle {
     /** `<modId>:<id>` — unique across mods; also the imgui.ini key, so keep it stable. */
     val id: String
+    /** The ImGui window label to use in `ImGui.begin` for raw panels: `"<title>###<id>"` (the part after ### is the identity). */
+    val windowLabel: String
     val title: String
     val icon: String?
     val owner: ModHandle
