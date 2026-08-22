@@ -22,6 +22,9 @@ object Overlay {
     @Volatile var gameFocus: Boolean = false
         private set
 
+    /** Java-friendly accessor for other mods (e.g. to decide whether a mouse grab is human-initiated). */
+    @JvmStatic fun isGameFocus(): Boolean = gameFocus
+
     @JvmStatic fun toggle() { overlayOpen = !overlayOpen; if (!overlayOpen) gameFocus = false }
     @JvmStatic fun ensureOpen() { overlayOpen = true }
     @JvmStatic fun close() { overlayOpen = false; gameFocus = false }
