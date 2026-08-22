@@ -136,4 +136,14 @@ publishing {
             from(components["java"])
         }
     }
+    repositories {
+        // `./gradlew publish` in CI (release.yml) → GitHub Packages. Locally use publishToMavenLocal.
+        maven("https://maven.pkg.github.com/Nano112/panel-lib") {
+            name = "GitHubPackages"
+            credentials {
+                username = System.getenv("GITHUB_ACTOR") ?: ""
+                password = System.getenv("GITHUB_TOKEN") ?: ""
+            }
+        }
+    }
 }

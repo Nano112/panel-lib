@@ -33,3 +33,5 @@ build/
 run/
 !run/.gitkeep
 *.log
+fabric/run/
+fabric/versions/*/build/
