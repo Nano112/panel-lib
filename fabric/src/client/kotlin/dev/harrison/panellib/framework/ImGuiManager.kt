@@ -95,16 +95,23 @@ object ImGuiManager {
             val mh = net.minecraft.client.Minecraft.getInstance().mouseHandler
             if (!viewportsActive) {
                 io.setMousePos(mh.xpos().toFloat(), mh.ypos().toFloat())
-            } else if (syntheticRecently() || !anyOwnWindowHovered()) {
-                // With viewports, MousePos is in desktop coordinates and the GLFW backend tracks the REAL cursor.
-                // Let it, whenever the real cursor is over the game window or one of our external windows (a human
-                // is driving). Only when the real cursor is elsewhere do we feed MC's (possibly synthetic) cursor.
+            } else {
+                // With viewports, MousePos is in desktop coordinates and we install no cursor callback on MC's window
+                // (our mixins handle MC input), so positions for the game window must come from us every frame:
+                //  - synthetic input recently (automation): Minecraft's cursor (MouseHandler) + window pos
+                //  - real cursor over the game window: the OS cursor + window pos
+                //  - real cursor over one of our external windows: their own GLFW callbacks feed ImGui; do nothing
                 val mv = ImGui.getMainViewport()
-                val x = (mv?.posX ?: 0f) + mh.xpos().toFloat(); val y = (mv?.posY ?: 0f) + mh.ypos().toFloat()
-                // The GLFW backend queued the OS cursor position during newFrame; queue ours AFTER it so it wins
-                // when the input queue is drained next frame (setMousePos alone would be overwritten).
-                io.setMousePos(x, y)
-                io.addMousePosEvent(x, y)
+                val ox = mv?.posX ?: 0f; val oy = mv?.posY ?: 0f
+                if (syntheticRecently()) {
+                    val x = ox + mh.xpos().toFloat(); val y = oy + mh.ypos().toFloat()
+                    io.setMousePos(x, y); io.addMousePosEvent(x, y)
+                } else if (GLFW.glfwGetWindowAttrib(windowHandle, GLFW.GLFW_HOVERED) == GLFW.GLFW_TRUE) {
+                    val cx = DoubleArray(1); val cy = DoubleArray(1)
+                    GLFW.glfwGetCursorPos(windowHandle, cx, cy)
+                    val x = ox + cx[0].toFloat(); val y = oy + cy[0].toFloat()
+                    io.setMousePos(x, y); io.addMousePosEvent(x, y)
+                }
             }
         }
     }
