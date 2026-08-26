@@ -30,6 +30,13 @@ object GameViewport {
     @Volatile var central: Rect? = null
     private var spoofW = 0
     private var spoofH = 0
+    // Debounce: apply an MC framebuffer resize only after the target rect has held steady for a few frames.
+    // Interactive resizing/scrolling changes the rect every frame; each resize that flips MC's GUI scale
+    // triggers a full resource reload, so we wait for the size to settle and resize once.
+    private var wantW = 0
+    private var wantH = 0
+    private var stableFrames = 0
+    private const val SETTLE_FRAMES = 5
     private var fbo = 0
     private var tex = 0
     private var texW = 0
@@ -51,14 +58,20 @@ object GameViewport {
         return if (sw > 0) fw.toFloat() / sw else 1f
     }
 
-    /** Decide the size Minecraft should render at for the next frame and apply it if it changed. */
+    /** Decide the size Minecraft should render at for the next frame and apply it once the target has settled. */
     fun applySizing() {
         val rect = central
-        if (!enabled || rect == null || rect.w < 64 || rect.h < 64) { restore(); return }
-        if (rect.w != mc.window.width || rect.h != mc.window.height) {
+        if (!enabled || rect == null || rect.w < 64 || rect.h < 64) { restore(); wantW = 0; wantH = 0; return }
+        // Track how long the requested size has been steady.
+        if (rect.w == wantW && rect.h == wantH) stableFrames++ else { wantW = rect.w; wantH = rect.h; stableFrames = 0 }
+        val current = mc.window.width to mc.window.height
+        val settled = stableFrames >= SETTLE_FRAMES
+        if ((rect.w != current.first || rect.h != current.second) && (settled || spoofW == 0)) {
+            // Resize immediately the first time we embed (spoofW == 0), otherwise only after it settles.
             resizeMinecraft(rect.w, rect.h)
         }
-        spoofW = rect.w; spoofH = rect.h
+        // spoofW/H reflect the size MC is ACTUALLY rendering at (used by composite), i.e. the current window size.
+        spoofW = mc.window.width; spoofH = mc.window.height
     }
 
     /** Put the real window size back (overlay closed / embed disabled). */
@@ -71,6 +84,7 @@ object GameViewport {
 
     private fun resizeMinecraft(w: Int, h: Int) {
         (mc.window as WindowAccessor).`panellib$onFramebufferResize`(dev.harrison.panellib.compat.Compat.windowHandle(), w, h)
+        PanelLibLog.LOGGER.debug("[panel-lib] GameViewport resize -> {}x{} guiScale {}", w, h, mc.window.guiScale)
     }
 
     /** Debug aid: `-Dpanellib.noComposite=true` leaves FBO 0 untouched so the raw presented frame can be inspected. */
