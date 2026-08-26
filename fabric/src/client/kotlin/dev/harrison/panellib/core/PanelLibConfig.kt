@@ -6,8 +6,8 @@ import com.google.gson.JsonParser
 import java.nio.file.Files
 import java.nio.file.Path
 
-/** `config/panellib.json`: `{ "accent": "#5B8DEF" | null, "font_size": 14, "embed_game": true }`. */
-data class PanelLibConfig(val accent: String? = null, val fontSize: Float = 14f, val embedGame: Boolean = true, val externalWindows: Boolean = false) {
+/** `config/panellib.json`: `{ "accent": "#5B8DEF" | null, "font_size": 14, "embed_game": true, "external_windows": true }`. */
+data class PanelLibConfig(val accent: String? = null, val fontSize: Float = 14f, val embedGame: Boolean = true, val externalWindows: Boolean = true) {
     companion object {
         private val gson = GsonBuilder().setPrettyPrinting().serializeNulls().create()
 
@@ -26,7 +26,7 @@ data class PanelLibConfig(val accent: String? = null, val fontSize: Float = 14f,
                 accent = o.get("accent")?.takeUnless { it.isJsonNull }?.asString?.takeIf { it.isNotBlank() },
                 fontSize = o.get("font_size")?.takeUnless { it.isJsonNull }?.asFloat ?: 14f,
                 embedGame = o.get("embed_game")?.takeUnless { it.isJsonNull }?.asBoolean ?: true,
-                externalWindows = o.get("external_windows")?.takeUnless { it.isJsonNull }?.asBoolean ?: false,
+                externalWindows = o.get("external_windows")?.takeUnless { it.isJsonNull }?.asBoolean ?: true,
             )
         }
     }

@@ -13,7 +13,7 @@ Mods that use panel-lib bundle it. To install it standalone, drop the jar for yo
 [Releases](https://github.com/Nano112/panel-lib/releases) into `mods/` (needs Fabric API + Fabric Language Kotlin).
 
 - **K** toggles the overlay · click the game area to play, **Esc** returns to the panels · **Layout ▾** resets the layout.
-- `config/panellib.json`: `accent` (`#hex`), `font_size` (14), `embed_game`, `external_windows`.
+- `config/panellib.json`: `accent` (`#hex`), `font_size` (14), `embed_game` (true), `external_windows` (true - drag panels out into OS windows).
 
 ### External windows
 
