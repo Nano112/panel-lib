@@ -145,5 +145,14 @@ publishing {
                 password = System.getenv("GITHUB_TOKEN") ?: ""
             }
         }
+        // Public, anonymous-readable maven served from GitHub Pages.
+        // Every Stonecutter version stages into ONE shared directory at the repo
+        // root, which release.yml then deploys to the gh-pages branch. Consumers
+        // (e.g. SchematioConnector) read it without credentials - GitHub Packages
+        // requires auth even for public packages, which breaks other repos' CI.
+        maven {
+            name = "Staging"
+            url = uri(rootProject.layout.buildDirectory.dir("maven-repo"))
+        }
     }
 }

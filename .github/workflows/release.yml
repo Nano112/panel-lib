@@ -24,6 +24,17 @@ jobs:
         env:
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Stage Maven artifacts for the public Pages repo
+        run: ./gradlew publishAllPublicationsToStagingRepository -x test --no-daemon
+      - name: Deploy Maven repo to GitHub Pages
+        # keep_files preserves previously released versions - a maven repo is
+        # cumulative, so this must never wipe the branch.
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: build/maven-repo
+          destination_dir: maven
+          keep_files: true
       - name: GitHub Release with jars
         uses: softprops/action-gh-release@v2
         with:
