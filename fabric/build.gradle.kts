@@ -117,6 +117,8 @@ kotlin {
     jvmToolchain(javaVer)
 }
 
+tasks.withType<Jar>().configureEach { from(rootProject.file("LICENSE")) }
+
 tasks.register<Copy>("buildAndCollect") {
     group = "build"
     from(tasks.named(if ("remapJar" in tasks.names) "remapJar" else "jar"))

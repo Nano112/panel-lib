@@ -2,16 +2,12 @@ package dev.harrison.panellib.framework
 
 import dev.harrison.panellib.core.MenuEntry
 import dev.harrison.panellib.core.Registry
-import dev.harrison.panellib.theme.Fonts
 import dev.harrison.panellib.theme.Icons
 import dev.harrison.panellib.theme.Theme
-import dev.harrison.panellib.theme.withFont
 import imgui.ImGui
-import imgui.flag.ImGuiCol
 
 /**
- * The shared top bar: wordmark · one `<Mod> ▾` menu per contributor (panels as checkable items,
- * then custom items) · right-aligned `Layout ▾`.
+ * Contributor menus and a compact layout menu. The library adds no wordmark.
  */
 object Toolbar {
     private var registryRef: Registry? = null
@@ -20,11 +16,6 @@ object Toolbar {
 
     fun renderMenuBar() {
         val t = Theme.current
-        ImGui.textColored(t.accent.x, t.accent.y, t.accent.z, t.accent.w, Icons.LAYER_GROUP)
-        ImGui.sameLine(0f, 6f)
-        withFont(Fonts.SEMIBOLD) { ImGui.text("Panels") }
-        ImGui.textDisabled("|")
-
         val mods = registry().mods()
         if (mods.isEmpty()) ImGui.textDisabled("no mods registered")
         for (mod in mods) {
@@ -55,22 +46,21 @@ object Toolbar {
             }
         }
 
-        // Hint + right-aligned Layout menu.
-        val hint = if (Overlay.gameFocus) "playing · Esc returns to panels" else if (GameViewport.enabled) "click the game to play" else ""
-        val layoutLabel = "${Icons.WINDOW}  Layout  ${Icons.CHEVRON_DOWN}"
-        val hintW = if (hint.isEmpty()) 0f else ImGui.calcTextSize(hint).x + 16f
-        val w = ImGui.calcTextSize(layoutLabel).x + ImGui.getStyle().framePaddingX * 2 + 8f + hintW
+        val layoutLabel = "${Icons.WINDOW}##panel-layout"
+        val w = ImGui.calcTextSize(Icons.WINDOW).x + ImGui.getStyle().framePaddingX * 2 + 8f
         val avail = ImGui.getContentRegionAvailX()
         if (avail > w) ImGui.setCursorPosX(ImGui.getCursorPosX() + avail - w)
-        if (hint.isNotEmpty()) { ImGui.textDisabled(hint); ImGui.sameLine(0f, 16f) }
         if (ImGui.beginMenu(layoutLabel)) {
             if (ImGui.menuItem("${Icons.REFRESH}  Reset layout")) DockHost.resetLayout()
             if (ImGui.menuItem("${Icons.XMARK}  Close all panels")) PanelManager.closeAll()
             if (ImGui.menuItem("${Icons.WINDOW}  Embed game in layout", "", GameViewport.enabled)) GameViewport.enabled = !GameViewport.enabled
             ImGui.separator()
             if (ImGui.menuItem("${Icons.EYE}  Hide overlay", "Esc")) { PanelManager.closeAll(); Overlay.close() }
+            ImGui.separator()
+            ImGui.textDisabled(if (Overlay.gameFocus) "Esc returns to panels" else "Click the game to play")
             ImGui.endMenu()
         }
+        if (ImGui.isItemHovered()) ImGui.setTooltip("Panel layout")
     }
 
 }

@@ -89,6 +89,8 @@ interface ModHandle {
 }
 
 interface PanelHandle {
+    /** Invoked once per close, including Escape, title-bar close, and close-all. */
+    fun onClose(listener: () -> Unit) {}
     /** `<modId>:<id>` — unique across mods; also the imgui.ini key, so keep it stable. */
     val id: String
     /** The ImGui window label to use in `ImGui.begin` for raw panels: `"<title>###<id>"` (the part after ### is the identity). */
