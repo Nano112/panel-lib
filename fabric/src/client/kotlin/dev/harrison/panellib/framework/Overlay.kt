@@ -14,6 +14,8 @@ import net.minecraft.client.Minecraft
 object Overlay {
     @Volatile private var overlayOpen = false
     @Volatile private var cursorReleased = false
+    private var suspended = false
+    private var wasVisible = false
 
     /**
      * Game-focus sub-mode: the overlay stays visible but the game owns mouse + keyboard (cursor grabbed,
@@ -57,7 +59,7 @@ object Overlay {
         runCatching { Toolbar.registry().frameHooks().any { it.keepsOverlayOpen() } }.getOrDefault(false)
 
     /** The overlay is drawn (no vanilla screen covers it). */
-    @JvmStatic fun isVisible(): Boolean = Compat.screen() == null && active()
+    @JvmStatic fun isVisible(): Boolean = !EditorOwnership.isForeignEditorActive() && Compat.screen() == null && active()
 
     /** The overlay owns input: visible AND not in game focus. Single source of truth for the input mixins. */
     @JvmStatic fun isFocused(): Boolean = isVisible() && !gameFocus
@@ -73,23 +75,42 @@ object Overlay {
 
     @JvmStatic
     fun render() {
-        reconcileCursor()
-        ImGuiManager.initIfNeeded()
-        if (!ImGuiManager.initialized || !isVisible()) { GameViewport.restore(); return }
-        ImGuiManager.startFrame(focused = !gameFocus)
-        ThemeApplier.apply()
-        try {
-            DockHost.render()
-            PanelManager.renderAll()
-            for (hook in Toolbar.registry().frameHooks()) {
-                try { hook.render() } catch (t: Throwable) { PanelLibLog.LOGGER.error("[panel-lib] frame hook threw", t) }
+        if (EditorOwnership.isForeignEditorActive()) {
+            if (!suspended) {
+                GameViewport.restore()
+                ImGuiManager.suspendInput()
+                cursorReleased = false
+                gameFocus = false
+                suspended = true
+                wasVisible = false
             }
-            ConfirmModal.render()
-        } finally {
-            ThemeApplier.unapply()
+            return
         }
-        GameViewport.composite()   // move the game frame into the central rect, under the panels
-        ImGuiManager.endFrame()
-        GameViewport.applySizing() // size Minecraft for the NEXT frame
+        suspended = false
+        reconcileCursor()
+        if (!isVisible()) {
+            GameViewport.restore()
+            if (wasVisible) ImGuiManager.suspendInput()
+            wasVisible = false
+            return
+        }
+        ImGuiManager.initIfNeeded()
+        if (!ImGuiManager.initialized) return
+        wasVisible = true
+        try {
+            ImGuiManager.startFrame(focused = !gameFocus)
+            ThemeApplier.apply()
+            try {
+                DockHost.render()
+                PanelManager.renderAll()
+                for (hook in Toolbar.registry().frameHooks()) {
+                    try { hook.render() } catch (t: Throwable) { PanelLibLog.LOGGER.error("[panel-lib] frame hook threw", t) }
+                }
+                ConfirmModal.render()
+            } finally { ThemeApplier.unapply() }
+            GameViewport.composite()   // move the game frame into the central rect, under the panels
+            ImGuiManager.endFrame()
+            GameViewport.applySizing() // size Minecraft for the NEXT frame
+        } finally { ImGuiManager.restoreFrameContext() }
     }
 }

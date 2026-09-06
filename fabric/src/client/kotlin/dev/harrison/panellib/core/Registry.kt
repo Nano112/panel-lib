@@ -18,6 +18,9 @@ class PanelSpec(
     /** Shown in the mod's toolbar menu. */
     val listed: Boolean = true,
 ) : PanelHandle {
+    private val closeListeners = mutableListOf<() -> Unit>()
+    override fun onClose(listener: () -> Unit) { closeListeners.add(listener) }
+    internal fun notifyClosed() { closeListeners.toList().forEach { it() } }
     override val isOpen: Boolean get() = manager.isOpen(id)
     override fun open() = manager.open(this)
     override fun close() = manager.close(id)

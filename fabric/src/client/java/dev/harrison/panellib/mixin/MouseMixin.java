@@ -46,8 +46,12 @@ public class MouseMixin {
         require = 1
     )
     private void panellib$onButton(long window, int button, int action, int mods, CallbackInfo ci) {
+        if (action == 0) {
+            if (ImGuiManager.releaseButton(window, button, mods)) ci.cancel();
+            return;
+        }
         if (!Overlay.isFocused()) return;
-        if (!ImGui.getIO().getWantCaptureMouse()) {
+        if (!ImGuiManager.wantsMouse()) {
             if (action == 1) Overlay.enterGameFocus();
             ci.cancel();
             return;
@@ -63,9 +67,13 @@ public class MouseMixin {
         require = 1
     )
     private void panellib$onButton(long window, MouseButtonInfo mouseButtonInfo, int action, CallbackInfo ci) {
+        if (action == 0) {
+            if (ImGuiManager.releaseButton(window, mouseButtonInfo.button(), mouseButtonInfo.modifiers())) ci.cancel();
+            return;
+        }
         if (!Overlay.isFocused()) return;
         // Click on the game area (no ImGui window under the cursor): hand the game the mouse.
-        if (!ImGui.getIO().getWantCaptureMouse()) {
+        if (!ImGuiManager.wantsMouse()) {
             if (action == 1) Overlay.enterGameFocus();
             ci.cancel();
             return;
@@ -89,7 +97,7 @@ public class MouseMixin {
     private void panellib$onScroll(long window, double xOffset, double yOffset, CallbackInfo ci) {
         if (!Overlay.isFocused()) return;
         // Passthrough: scroll reaches the game (hotbar) unless the cursor is over a window.
-        if (!ImGui.getIO().getWantCaptureMouse()) return;
+        if (!ImGuiManager.wantsMouse()) return;
         ImGuiManager.scrollCallback(window, xOffset, yOffset);
         ci.cancel();
     }

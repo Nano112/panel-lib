@@ -78,8 +78,9 @@ object GameViewport {
     fun restore() {
         if (spoofW == 0) return
         val (rw, rh) = realFramebufferSize()
+        val stillOwned = mc.window.width == spoofW && mc.window.height == spoofH
         spoofW = 0; spoofH = 0
-        if (rw != mc.window.width || rh != mc.window.height) resizeMinecraft(rw, rh)
+        if (stillOwned && (rw != mc.window.width || rh != mc.window.height)) resizeMinecraft(rw, rh)
     }
 
     private fun resizeMinecraft(w: Int, h: Int) {

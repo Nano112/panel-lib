@@ -22,12 +22,16 @@ object PanelManager : PanelController {
         PanelLibLog.LOGGER.debug("[panel-lib] open panel {}", panel.id)
         open.putIfAbsent(panel.id, panel); Overlay.ensureOpen()
     }
-    override fun close(id: String) { PanelLibLog.LOGGER.debug("[panel-lib] close panel {}", id); open.remove(id) }
+    override fun close(id: String) {
+        val panel = open.remove(id) ?: return
+        settling.remove(id)
+        runCatching { panel.notifyClosed() }.onFailure { PanelLibLog.LOGGER.error("Panel close listener failed for {}", id, it) }
+    }
     override fun toggle(panel: PanelSpec) { if (isOpen(panel.id)) close(panel.id) else open(panel) }
     fun anyOpen(): Boolean = open.isNotEmpty()
     fun openPanels(): List<PanelSpec> = open.values.toList()
-    fun closeAll() = open.clear()
-    fun closeTop() { open.keys.lastOrNull()?.let { open.remove(it) } }
+    fun closeAll() = open.keys.toList().forEach(::close)
+    fun closeTop() { open.keys.lastOrNull()?.let(::close) }
 
     /** Visible for tests: reset all state. */
     internal fun reset() = open.clear()

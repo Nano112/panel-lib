@@ -90,10 +90,14 @@ public class KeyboardMixin {
         require = 1
     )
     public void panellib$onKeyPress(long window, int key, int scancode, int action, int mods, CallbackInfo ci) {
+        if (action == GLFW.GLFW_RELEASE) {
+            if (ImGuiManager.releaseKey(window, key, scancode, mods)) ci.cancel();
+            return;
+        }
         if (!Overlay.isFocused()) return;
         // Passthrough: game hotkeys/movement keep working unless an ImGui text field
         // is focused (then ImGui wants the keyboard).
-        if (!ImGui.getIO().getWantCaptureKeyboard()) return;
+        if (!ImGuiManager.wantsKeyboard()) return;
         ImGuiManager.keyCallback(window, key, scancode, action, mods);
         ci.cancel();
     }
@@ -105,10 +109,14 @@ public class KeyboardMixin {
         require = 1
     )
     private void panellib$onKeyPress(long window, int action, KeyEvent keyEvent, CallbackInfo ci) {
+        if (action == GLFW.GLFW_RELEASE) {
+            if (ImGuiManager.releaseKey(window, keyEvent.key(), keyEvent.scancode(), keyEvent.modifiers())) ci.cancel();
+            return;
+        }
         if (!Overlay.isFocused()) return;
         // Passthrough: game hotkeys/movement keep working unless an ImGui text field
         // is focused (then ImGui wants the keyboard).
-        if (!ImGui.getIO().getWantCaptureKeyboard()) return;
+        if (!ImGuiManager.wantsKeyboard()) return;
         ImGuiManager.keyCallback(window, keyEvent.key(), keyEvent.scancode(), action, keyEvent.modifiers());
         ci.cancel();
     }
@@ -129,7 +137,7 @@ public class KeyboardMixin {
     )
     private void panellib$onCharTyped(long window, int codepoint, int mods, CallbackInfo ci) {
         if (!Overlay.isFocused()) return;
-        if (!ImGui.getIO().getWantCaptureKeyboard()) return;
+        if (!ImGuiManager.wantsKeyboard()) return;
         ImGuiManager.charCallback(window, codepoint);
         ci.cancel();
     }
@@ -142,7 +150,7 @@ public class KeyboardMixin {
     )
     private void panellib$onCharTyped(long window, CharacterEvent characterEvent, CallbackInfo ci) {
         if (!Overlay.isFocused()) return;
-        if (!ImGui.getIO().getWantCaptureKeyboard()) return;
+        if (!ImGuiManager.wantsKeyboard()) return;
         ImGuiManager.charCallback(window, characterEvent.codepoint());
         ci.cancel();
     }
