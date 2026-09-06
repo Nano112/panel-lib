@@ -29,8 +29,8 @@ Verified on macOS; Windows/Linux should work the same (GLFW) but are untested, t
 // build.gradle.kts — public Maven repository, no credentials needed
 repositories { maven("https://nano112.github.io/panel-lib/maven/") }
 dependencies {
-    modImplementation("dev.harrison:panel-lib-mc$mcVersion:0.1.3")
-    include("dev.harrison:panel-lib-mc$mcVersion:0.1.3")   // bundle it
+    modImplementation("dev.harrison:panel-lib-mc$mcVersion:0.1.4")
+    include("dev.harrison:panel-lib-mc$mcVersion:0.1.4")   // bundle it
 }
 ```
 
@@ -84,3 +84,5 @@ CI builds every version on push; tagging `v*` publishes jars to Releases and Mav
 This project uses AI assistance for code and documentation. Source changes and
 release artifacts are public. Report problems with your Minecraft version, the
 mod using the panel, and the steps that reproduce them.
+
+The bundled Inter and Font Awesome fonts retain their SIL Open Font License. Their notices are included beside the font files in every jar.
