@@ -22,7 +22,8 @@ for mc in targets:
         meta = json.loads(jar.read('fabric.mod.json'))
         assert meta['id'] == 'panellib' and meta['version'] == version
         assert meta['environment'] == 'client'
-        assert meta['depends']['minecraft'] == mc
+        mc_pins = dict(line.split('=', 1) for line in (root / f'fabric/versions/{mc}/gradle.properties').read_text().splitlines() if '=' in line and not line.startswith('#'))
+        assert meta['depends']['minecraft'] == mc_pins['mod.mc_compat']
         assert meta['depends']['fabric-language-kotlin'] == '>=' + pins['deps.flk_min']
         assert meta['contact']['sources'] == 'https://github.com/Nano112/panel-lib'
         assert '${' not in json.dumps(meta)
