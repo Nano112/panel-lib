@@ -19,6 +19,8 @@ for mc in targets:
     with zipfile.ZipFile(path) as jar:
         assert jar.testzip() is None
         assert 'LICENSE' in jar.namelist()
+        for font_license in ['LICENSE-Inter.txt', 'LICENSE-Font-Awesome.txt']:
+            assert b'SIL OPEN FONT LICENSE' in jar.read('assets/panellib/fonts/' + font_license)
         meta = json.loads(jar.read('fabric.mod.json'))
         assert meta['id'] == 'panellib' and meta['version'] == version
         assert meta['environment'] == 'client'
