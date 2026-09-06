@@ -12,7 +12,7 @@ Minecraft 1.21.8 – 1.21.11, 26.1, 26.2 · Fabric · Kotlin · MIT
 Mods that use panel-lib bundle it. To install it standalone, drop the jar for your Minecraft version from
 [Releases](https://github.com/Nano112/panel-lib/releases) into `mods/` (needs Fabric API + Fabric Language Kotlin).
 
-- **K** toggles the overlay · click the game area to play, **Esc** returns to the panels · **Layout ▾** resets the layout.
+- **K** toggles the overlay · click the game area to play, **Esc** returns to the panels · the window icon at the top right opens layout controls.
 - `config/panellib.json`: `accent` (`#hex`), `font_size` (14), `embed_game` (true), `external_windows` (true - drag panels out into OS windows).
 
 ### External windows
@@ -21,23 +21,16 @@ Set `"external_windows": true` (restart the game). Drag a panel's tab out of the
 it **past the edge of the Minecraft window**: it becomes its own OS window (ImGui multi-viewport, rendered by
 panel-lib with a shared GL context). To re-attach, drag it so it is **fully inside** the game window and release
 (ImGui merges it back). Panels never start detached: on open they are pinned inside the game window.
-Verified on macOS; Windows/Linux should work the same (GLFW) but are untested, which is why it is opt-in.
+Verified on macOS; Windows/Linux should work the same (GLFW) but are untested, the setting defaults to enabled.
 
 ## Use it in your mod
 
 ```kotlin
-// build.gradle.kts — GitHub Packages (token with read:packages) or mavenLocal after `publishToMavenLocal`
-repositories {
-    maven("https://maven.pkg.github.com/Nano112/panel-lib") {
-        credentials {
-            username = providers.gradleProperty("gpr.user").orElse(providers.environmentVariable("GITHUB_ACTOR")).get()
-            password = providers.gradleProperty("gpr.key").orElse(providers.environmentVariable("GITHUB_TOKEN")).get()
-        }
-    }
-}
+// build.gradle.kts — public Maven repository, no credentials needed
+repositories { maven("https://nano112.github.io/panel-lib/maven/") }
 dependencies {
-    modImplementation("dev.harrison:panel-lib-mc$mcVersion:0.1.0")
-    include("dev.harrison:panel-lib-mc$mcVersion:0.1.0")   // bundle it
+    modImplementation("dev.harrison:panel-lib-mc$mcVersion:0.1.3")
+    include("dev.harrison:panel-lib-mc$mcVersion:0.1.3")   // bundle it
 }
 ```
 
@@ -85,3 +78,9 @@ object MyPanels : PanelLibEntrypoint {
 
 Sources are written for the active version (1.21.11); other versions use Stonecutter `//? if` splits.
 CI builds every version on push; tagging `v*` publishes jars to Releases and Maven artifacts to GitHub Packages.
+
+## Development
+
+This project uses AI assistance for code and documentation. Source changes and
+release artifacts are public. Report problems with your Minecraft version, the
+mod using the panel, and the steps that reproduce them.
