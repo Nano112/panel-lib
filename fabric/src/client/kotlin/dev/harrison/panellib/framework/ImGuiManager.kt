@@ -19,6 +19,7 @@ object ImGuiManager {
     private var frameOpen = false
     private var lastMonitorPoll = 0L
     private var platformWindowsHidden = false
+    private var mainCursorPresent = false
     /** Opt-in (config `external_windows`): panels dragged outside the game become their own OS windows. */
     @Volatile var externalWindows: Boolean = false
     var viewportsActive = false
@@ -68,6 +69,7 @@ object ImGuiManager {
             // ImGuiImplGlfw only polls the cursor when mouseWindow != -1, which only a cursor-enter
             // callback sets; with installCallbacks=false we must prime it and keep it updated.
             imGuiGlfw.cursorEnterCallback(wh, true)
+            mainCursorPresent = true
             // Cursor presence is polled when our frame starts. Do not replace another mod's callback.
             // Our renderer is the sole owner of the font atlas texture (see ImGuiGl3Renderer).
             ImGuiGl3Renderer.initIfNeeded()
@@ -101,8 +103,14 @@ object ImGuiManager {
     fun startFrame(focused: Boolean) {
         previousFrameContext = ImGui.getCurrentContext()
         ImGui.setCurrentContext(context)
-        imGuiGlfw.cursorEnterCallback(windowHandle,
-            GLFW.glfwGetWindowAttrib(windowHandle, GLFW.GLFW_HOVERED) == GLFW.GLFW_TRUE || syntheticRecently())
+        val synthetic = focused && syntheticRecently()
+        val mainHovered = GLFW.glfwGetWindowAttrib(windowHandle, GLFW.GLFW_HOVERED) == GLFW.GLFW_TRUE
+        val present = mainHovered || synthetic
+        // Enter replays the backend's last valid position. It is an edge event, not a per-frame poll.
+        if (present != mainCursorPresent) {
+            imGuiGlfw.cursorEnterCallback(windowHandle, present)
+            mainCursorPresent = present
+        }
         val now = System.nanoTime()
         if (now - lastMonitorPoll > 1_000_000_000L) {
             imGuiGlfw.monitorCallback(0L, 0)
@@ -117,38 +125,26 @@ object ImGuiManager {
             platformWindowsHidden = false
         }
         imGuiGlfw.newFrame()
-        ImGui.newFrame()
-        frameOpen = true
         val io = ImGui.getIO()
-        if (!focused) {
-            io.setMousePos(-Float.MAX_VALUE, -Float.MAX_VALUE)
-            for (i in 0 until 5) io.setMouseDown(i, false)
-        } else {
-            // Use Minecraft's notion of the cursor (fed by MouseHandler.onMove) rather than polling GLFW:
-            // it is always valid, and synthetic input injected at the MouseHandler level (automation,
-            // MC-Inspector's MCP host) moves it while the OS cursor stays put.
-            val mh = net.minecraft.client.Minecraft.getInstance().mouseHandler
-            if (!viewportsActive) {
-                io.setMousePos(mh.xpos().toFloat(), mh.ypos().toFloat())
-            } else {
-                // With viewports, MousePos is in desktop coordinates and we install no cursor callback on MC's window
-                // (our mixins handle MC input), so positions for the game window must come from us every frame:
-                //  - synthetic input recently (automation): Minecraft's cursor (MouseHandler) + window pos
-                //  - real cursor over the game window: the OS cursor + window pos
-                //  - real cursor over one of our external windows: their own GLFW callbacks feed ImGui; do nothing
-                val mv = ImGui.getMainViewport()
-                val ox = mv?.posX ?: 0f; val oy = mv?.posY ?: 0f
-                if (syntheticRecently()) {
-                    val x = ox + mh.xpos().toFloat(); val y = oy + mh.ypos().toFloat()
-                    io.setMousePos(x, y); io.addMousePosEvent(x, y)
-                } else if (GLFW.glfwGetWindowAttrib(windowHandle, GLFW.GLFW_HOVERED) == GLFW.GLFW_TRUE) {
-                    val cx = DoubleArray(1); val cy = DoubleArray(1)
-                    GLFW.glfwGetCursorPos(windowHandle, cx, cy)
-                    val x = ox + cx[0].toFloat(); val y = oy + cy[0].toFloat()
-                    io.setMousePos(x, y); io.addMousePosEvent(x, y)
+        // Feed input BEFORE NewFrame: it consumes queued events and decides which window owns the mouse.
+        // Writing MousePos afterwards updates widget rendering but leaves WantCaptureMouse at the old point.
+        CursorFrame.begin(focused) {
+            if (!viewportsActive || synthetic) {
+                val mh = net.minecraft.client.Minecraft.getInstance().mouseHandler
+                // Also updates the GLFW backend's last valid position and handles desktop coordinates.
+                imGuiGlfw.cursorPosCallback(windowHandle, mh.xpos(), mh.ypos())
+                if (synthetic && viewportsActive) {
+                    // OS hover may point at another app while MCP supplies input to Minecraft.
+                    io.addMouseViewportEvent(ImGui.getMainViewport().id)
                 }
+            } else if (mainHovered) {
+                val x = DoubleArray(1); val y = DoubleArray(1)
+                GLFW.glfwGetCursorPos(windowHandle, x, y)
+                imGuiGlfw.cursorPosCallback(windowHandle, x[0], y[0])
             }
+            // Detached windows keep the input supplied by their own GLFW callbacks.
         }
+        frameOpen = true
     }
 
     /** True when the OS cursor is over the game window or any of our external viewport windows. */
@@ -234,6 +230,7 @@ object ImGuiManager {
         context = null
         initialized = false
         windowHandle = 0L
+        mainCursorPresent = false
     }
 
     // Input forwarders (called from the mixins).

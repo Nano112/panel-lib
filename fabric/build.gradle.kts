@@ -54,9 +54,6 @@ dependencies {
 
 configurations.named("testRuntimeClasspath") {
     exclude(group = "io.github.spair", module = "imgui-java-lwjgl3")
-    exclude(group = "io.github.spair", module = "imgui-java-natives-windows")
-    exclude(group = "io.github.spair", module = "imgui-java-natives-linux")
-    exclude(group = "io.github.spair", module = "imgui-java-natives-macos")
     exclude(group = "org.lwjgl")
 }
 
@@ -128,6 +125,11 @@ tasks.register<Copy>("buildAndCollect") {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+    // imgui-java extracts its native library into java.io.tmpdir. Parallel Minecraft targets
+    // must not overwrite the same library while another test JVM is loading it.
+    val nativeTemp = layout.buildDirectory.dir("tmp/imgui-tests").get().asFile
+    systemProperty("java.io.tmpdir", nativeTemp.absolutePath)
+    doFirst { nativeTemp.mkdirs() }
 }
 
 // Consumers depend on `dev.harrison:panel-lib-mc<mcVersion>:<version>` from mavenLocal.

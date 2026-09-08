@@ -29,8 +29,8 @@ Verified on macOS; Windows/Linux should work the same (GLFW) but are untested, t
 // build.gradle.kts — public Maven repository, no credentials needed
 repositories { maven("https://nano112.github.io/panel-lib/maven/") }
 dependencies {
-    modImplementation("dev.harrison:panel-lib-mc$mcVersion:0.1.4")
-    include("dev.harrison:panel-lib-mc$mcVersion:0.1.4")   // bundle it
+    modImplementation("dev.harrison:panel-lib-mc$mcVersion:0.1.5")
+    include("dev.harrison:panel-lib-mc$mcVersion:0.1.5")   // bundle it
 }
 ```
 
