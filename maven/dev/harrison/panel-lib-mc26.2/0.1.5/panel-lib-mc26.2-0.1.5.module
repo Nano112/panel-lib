@@ -1,0 +1,171 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "dev.harrison",
+    "module": "panel-lib-mc26.2",
+    "version": "0.1.5",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "9.4.1"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.jvm.version": 25,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "dependencies": [
+        {
+          "group": "io.github.spair",
+          "module": "imgui-java-binding",
+          "version": {
+            "requires": "1.89.0"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.4.0"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "panel-lib-mc26.2-0.1.5.jar",
+          "url": "panel-lib-mc26.2-0.1.5.jar",
+          "size": 8043832,
+          "sha512": "2cb536a2314ae26e11820d9f92e31cf0dae3dc13c81cbdacd1414ab8157b4b8e477927fe4cd7904fc4feabfbba503c57cf0704fa1a6cf51e3c6c428a4c1ab307",
+          "sha256": "0392501723364a61d267e19476c43b37d062d86eab784a89b25cb2cc07f82e1f",
+          "sha1": "e7657f0c689f7fd5096a3aa68878f62a322b6ba9",
+          "md5": "e35fcb9451f16153ef1b5f6ee78c63f5"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.jvm.version": 25,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "dependencies": [
+        {
+          "group": "net.fabricmc",
+          "module": "fabric-loader",
+          "version": {
+            "requires": "0.19.3"
+          }
+        },
+        {
+          "group": "net.fabricmc.fabric-api",
+          "module": "fabric-api",
+          "version": {
+            "requires": "0.154.2+26.2"
+          }
+        },
+        {
+          "group": "net.fabricmc",
+          "module": "fabric-language-kotlin",
+          "version": {
+            "requires": "1.13.12+kotlin.2.4.0"
+          }
+        },
+        {
+          "group": "io.github.spair",
+          "module": "imgui-java-lwjgl3",
+          "version": {
+            "requires": "1.89.0"
+          },
+          "excludes": [
+            {
+              "group": "org.lwjgl",
+              "module": "*"
+            }
+          ]
+        },
+        {
+          "group": "io.github.spair",
+          "module": "imgui-java-natives-windows",
+          "version": {
+            "requires": "1.89.0"
+          }
+        },
+        {
+          "group": "io.github.spair",
+          "module": "imgui-java-natives-linux",
+          "version": {
+            "requires": "1.89.0"
+          }
+        },
+        {
+          "group": "io.github.spair",
+          "module": "imgui-java-natives-macos",
+          "version": {
+            "requires": "1.89.0"
+          }
+        },
+        {
+          "group": "io.github.spair",
+          "module": "imgui-java-binding",
+          "version": {
+            "requires": "1.89.0"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.4.0"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "panel-lib-mc26.2-0.1.5.jar",
+          "url": "panel-lib-mc26.2-0.1.5.jar",
+          "size": 8043832,
+          "sha512": "2cb536a2314ae26e11820d9f92e31cf0dae3dc13c81cbdacd1414ab8157b4b8e477927fe4cd7904fc4feabfbba503c57cf0704fa1a6cf51e3c6c428a4c1ab307",
+          "sha256": "0392501723364a61d267e19476c43b37d062d86eab784a89b25cb2cc07f82e1f",
+          "sha1": "e7657f0c689f7fd5096a3aa68878f62a322b6ba9",
+          "md5": "e35fcb9451f16153ef1b5f6ee78c63f5"
+        }
+      ]
+    },
+    {
+      "name": "sourcesElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "panel-lib-mc26.2-0.1.5-sources.jar",
+          "url": "panel-lib-mc26.2-0.1.5-sources.jar",
+          "size": 633243,
+          "sha512": "45e5f493df8eb0bcc9c5b12b77be3061529141fa0489742bb5a94b3cdb140ae7690e2bcbf2f31abd781f299aadd6e2f13b23d17b15e70277ca06118bd752636b",
+          "sha256": "c01e23344a6119c78d85e7478db566c176600638719cef095a69fe039235ef8f",
+          "sha1": "2e8c2fc770a89734063ae6dc4b760712282accd7",
+          "md5": "67708271a67899ec35c1a724ab6d3e96"
+        }
+      ]
+    }
+  ]
+}
