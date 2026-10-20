@@ -3,7 +3,6 @@ package dev.harrison.panellib.framework
 import dev.harrison.panellib.mixin.WindowAccessor
 import dev.harrison.panellib.theme.Theme
 import net.minecraft.client.Minecraft
-import org.lwjgl.glfw.GLFW
 import org.lwjgl.opengl.GL11
 import org.lwjgl.opengl.GL30
 import kotlin.math.roundToInt
@@ -45,11 +44,8 @@ object GameViewport {
 
     private val mc get() = Minecraft.getInstance()
 
-    private fun realFramebufferSize(): Pair<Int, Int> {
-        val w = IntArray(1); val h = IntArray(1)
-        GLFW.glfwGetFramebufferSize(dev.harrison.panellib.compat.Compat.windowHandle(), w, h)
-        return w[0] to h[0]
-    }
+    private fun realFramebufferSize(): Pair<Int, Int> =
+        ImGuiPlatform.framebufferSize(dev.harrison.panellib.compat.Compat.windowHandle())
 
     /** Logical (ImGui) units → framebuffer pixels. */
     fun pixelRatio(): Float {
@@ -84,7 +80,11 @@ object GameViewport {
     }
 
     private fun resizeMinecraft(w: Int, h: Int) {
+        //? if >=26.3 {
+        /*(mc.window as WindowAccessor).`panellib$onFramebufferResize`(w, h)
+        *///?} else {
         (mc.window as WindowAccessor).`panellib$onFramebufferResize`(dev.harrison.panellib.compat.Compat.windowHandle(), w, h)
+        //?}
         PanelLibLog.LOGGER.debug("[panel-lib] GameViewport resize -> {}x{} guiScale {}", w, h, mc.window.guiScale)
     }
 

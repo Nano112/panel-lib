@@ -5,7 +5,7 @@ dockspace, theme, font/icon set and widget kit. Mods contribute panels, menu ent
 API; the game itself is embedded in the leftover space so you can keep playing with panels open.
 
 [![build](https://github.com/Nano112/panel-lib/actions/workflows/build.yml/badge.svg)](https://github.com/Nano112/panel-lib/actions/workflows/build.yml)
-Minecraft 1.21.8 – 1.21.11, 26.1, 26.2 · Fabric · Kotlin · MIT
+Minecraft 1.21.8 – 1.21.11, 26.1, 26.2, 26.3 · Fabric · Kotlin · MIT
 
 ## Install (for players)
 
@@ -22,6 +22,8 @@ it **past the edge of the Minecraft window**: it becomes its own OS window (ImGu
 panel-lib with a shared GL context). To re-attach, drag it so it is **fully inside** the game window and release
 (ImGui merges it back). Panels never start detached: on open they are pinned inside the game window.
 Verified on macOS; Windows/Linux should work the same (GLFW) but are untested, the setting defaults to enabled.
+Minecraft 26.3 replaced GLFW with SDL3, which imgui-java has no platform backend for: on 26.3 the setting is
+ignored and panels always stay inside the game window.
 
 ## Use it in your mod
 
@@ -29,8 +31,8 @@ Verified on macOS; Windows/Linux should work the same (GLFW) but are untested, t
 // build.gradle.kts — public Maven repository, no credentials needed
 repositories { maven("https://nano112.github.io/panel-lib/maven/") }
 dependencies {
-    modImplementation("dev.harrison:panel-lib-mc$mcVersion:0.1.5")
-    include("dev.harrison:panel-lib-mc$mcVersion:0.1.5")   // bundle it
+    modImplementation("dev.harrison:panel-lib-mc$mcVersion:0.1.6")
+    include("dev.harrison:panel-lib-mc$mcVersion:0.1.6")   // bundle it
 }
 ```
 

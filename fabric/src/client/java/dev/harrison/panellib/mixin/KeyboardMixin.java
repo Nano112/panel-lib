@@ -8,7 +8,7 @@ import net.minecraft.client.KeyboardHandler;
 import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.KeyEvent;
 //?}
-import org.lwjgl.glfw.GLFW;
+import com.mojang.blaze3d.platform.InputConstants;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -55,7 +55,7 @@ public class KeyboardMixin {
     )
     private void panellib$onEscape_legacy(long window, int key, int scancode, int action, int mods, CallbackInfo ci) {
         if (!Overlay.isVisible()) return;
-        if (key == GLFW.GLFW_KEY_ESCAPE && (action == GLFW.GLFW_PRESS || action == GLFW.GLFW_REPEAT)) {
+        if (key == InputConstants.KEY_ESCAPE && (action == InputConstants.PRESS || action == InputConstants.REPEAT)) {
             Overlay.onEscape();
             ci.cancel();
         }
@@ -69,7 +69,7 @@ public class KeyboardMixin {
     )
     private void panellib$onEscape(long window, int action, KeyEvent keyEvent, CallbackInfo ci) {
         if (!Overlay.isVisible()) return;
-        if (keyEvent.key() == GLFW.GLFW_KEY_ESCAPE && (action == GLFW.GLFW_PRESS || action == GLFW.GLFW_REPEAT)) {
+        if (keyEvent.key() == InputConstants.KEY_ESCAPE && (action == InputConstants.PRESS || action == InputConstants.REPEAT)) {
             Overlay.onEscape();
             ci.cancel();
         }
@@ -90,7 +90,7 @@ public class KeyboardMixin {
         require = 1
     )
     public void panellib$onKeyPress(long window, int key, int scancode, int action, int mods, CallbackInfo ci) {
-        if (action == GLFW.GLFW_RELEASE) {
+        if (action == InputConstants.RELEASE) {
             if (ImGuiManager.releaseKey(window, key, scancode, mods)) ci.cancel();
             return;
         }
@@ -109,15 +109,21 @@ public class KeyboardMixin {
         require = 1
     )
     private void panellib$onKeyPress(long window, int action, KeyEvent keyEvent, CallbackInfo ci) {
-        if (action == GLFW.GLFW_RELEASE) {
-            if (ImGuiManager.releaseKey(window, keyEvent.key(), keyEvent.scancode(), keyEvent.modifiers())) ci.cancel();
+        // 26.3 (SDL3): key() is the SDL scancode and the record carries the SDL keycode instead of a scancode.
+        //? if >=26.3 {
+        /*int secondCode = keyEvent.keycode();
+        *///?} else {
+        int secondCode = keyEvent.scancode();
+        //?}
+        if (action == InputConstants.RELEASE) {
+            if (ImGuiManager.releaseKey(window, keyEvent.key(), secondCode, keyEvent.modifiers())) ci.cancel();
             return;
         }
         if (!Overlay.isFocused()) return;
         // Passthrough: game hotkeys/movement keep working unless an ImGui text field
         // is focused (then ImGui wants the keyboard).
         if (!ImGuiManager.wantsKeyboard()) return;
-        ImGuiManager.keyCallback(window, keyEvent.key(), keyEvent.scancode(), action, keyEvent.modifiers());
+        ImGuiManager.keyCallback(window, keyEvent.key(), secondCode, action, keyEvent.modifiers());
         ci.cancel();
     }
     //?}
