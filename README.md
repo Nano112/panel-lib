@@ -31,8 +31,8 @@ ignored and panels always stay inside the game window.
 // build.gradle.kts — public Maven repository, no credentials needed
 repositories { maven("https://nano112.github.io/panel-lib/maven/") }
 dependencies {
-    modImplementation("dev.harrison:panel-lib-mc$mcVersion:0.1.5")
-    include("dev.harrison:panel-lib-mc$mcVersion:0.1.5")   // bundle it
+    modImplementation("dev.harrison:panel-lib-mc$mcVersion:0.1.6")
+    include("dev.harrison:panel-lib-mc$mcVersion:0.1.6")   // bundle it
 }
 ```
 
