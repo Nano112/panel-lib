@@ -5,13 +5,10 @@ import dev.harrison.panellib.theme.Fonts
 import imgui.ImGui
 import imgui.ImGuiIO
 import imgui.flag.ImGuiConfigFlags
-import imgui.glfw.ImGuiImplGlfw
 import imgui.internal.ImGuiContext
-import org.lwjgl.glfw.GLFW
 
-/** Owns the ImGui context, GLFW backend glue and frame lifecycle. Render thread only. */
+/** Owns the ImGui context, platform glue ([ImGuiPlatform]) and frame lifecycle. Render thread only. */
 object ImGuiManager {
-    private val imGuiGlfw = ImGuiImplGlfw()
     @Volatile var initialized = false; private set
     private var windowHandle = 0L
     private var context: ImGuiContext? = null
@@ -28,6 +25,7 @@ object ImGuiManager {
     @Volatile var lastSyntheticInputAt: Long = 0
     private fun syntheticRecently() = System.currentTimeMillis() - lastSyntheticInputAt < 2_000
     private const val INI_FILENAME = "panellib-imgui.ini"
+    private const val RELEASE = com.mojang.blaze3d.platform.InputConstants.RELEASE
 
     /** Unicode codepoints typed since last drain (for custom text widgets that bypass InputText). */
     private val typedChars = java.util.concurrent.ConcurrentLinkedQueue<Int>()
@@ -49,7 +47,9 @@ object ImGuiManager {
             // Docking ON (full-viewport DockHost + dockable panels; layout persisted in the ini).
             // Multi-viewport stays OFF: single overlay into MC's framebuffer.
             io.addConfigFlags(ImGuiConfigFlags.DockingEnable)
-            if (externalWindows) {
+            if (externalWindows && !ImGuiPlatform.supportsViewports) {
+                PanelLibLog.LOGGER.info("[panel-lib] external_windows is not supported on this Minecraft version; panels stay in the game window")
+            } else if (externalWindows) {
                 // Multi-viewport: ImGui's GLFW backend creates secondary windows (sharing MC's GL context);
                 // we render each one with our renderer from Renderer_RenderWindow.
                 io.addConfigFlags(ImGuiConfigFlags.ViewportsEnable)
@@ -59,16 +59,7 @@ object ImGuiManager {
             }
             io.fonts.clear()
             Fonts.load(io, pixelRatio = pixelRatio(wh))
-            // imgui-java 1.89 installs a global monitor callback even with installCallbacks=false.
-            // Restore its predecessor before returning to GLFW's event loop; poll our monitor list instead.
-            val previousMonitor = GLFW.glfwSetMonitorCallback(null)
-            try { imGuiGlfw.init(wh, false) } finally {
-                val installed = GLFW.glfwSetMonitorCallback(previousMonitor)
-                if (installed != null && installed.address() != previousMonitor?.address()) installed.free()
-            }
-            // ImGuiImplGlfw only polls the cursor when mouseWindow != -1, which only a cursor-enter
-            // callback sets; with installCallbacks=false we must prime it and keep it updated.
-            imGuiGlfw.cursorEnterCallback(wh, true)
+            ImGuiPlatform.init(wh)
             mainCursorPresent = true
             // Cursor presence is polled when our frame starts. Do not replace another mod's callback.
             // Our renderer is the sole owner of the font atlas texture (see ImGuiGl3Renderer).
@@ -93,38 +84,38 @@ object ImGuiManager {
         }
     }
 
-    /** Framebuffer px per logical window unit (2 on Retina), from GLFW. */
+    /** Framebuffer px per logical window unit (2 on Retina), from the OS window. */
     private fun pixelRatio(window: Long): Float {
-        val fw = IntArray(1); val fh = IntArray(1); val ww = IntArray(1); val whh = IntArray(1)
-        GLFW.glfwGetFramebufferSize(window, fw, fh); GLFW.glfwGetWindowSize(window, ww, whh)
-        return if (ww[0] > 0) fw[0].toFloat() / ww[0] else 1f
+        val (fw, _) = ImGuiPlatform.framebufferSize(window)
+        val (ww, _) = ImGuiPlatform.windowSize(window)
+        return if (ww > 0) fw.toFloat() / ww else 1f
     }
 
     fun startFrame(focused: Boolean) {
         previousFrameContext = ImGui.getCurrentContext()
         ImGui.setCurrentContext(context)
         val synthetic = focused && syntheticRecently()
-        val mainHovered = GLFW.glfwGetWindowAttrib(windowHandle, GLFW.GLFW_HOVERED) == GLFW.GLFW_TRUE
+        val mainHovered = ImGuiPlatform.isHovered(windowHandle)
         val present = mainHovered || synthetic
         // Enter replays the backend's last valid position. It is an edge event, not a per-frame poll.
         if (present != mainCursorPresent) {
-            imGuiGlfw.cursorEnterCallback(windowHandle, present)
+            ImGuiPlatform.cursorEnter(windowHandle, present)
             mainCursorPresent = present
         }
         val now = System.nanoTime()
         if (now - lastMonitorPoll > 1_000_000_000L) {
-            imGuiGlfw.monitorCallback(0L, 0)
+            ImGuiPlatform.pollMonitors()
             lastMonitorPoll = now
         }
         if (platformWindowsHidden) {
             val pio = ImGui.getPlatformIO()
             for (i in 1 until pio.viewportsSize) {
                 val handle = pio.getViewports(i).platformHandle
-                if (handle != 0L) GLFW.glfwShowWindow(handle)
+                if (handle != 0L) ImGuiPlatform.showWindow(handle)
             }
             platformWindowsHidden = false
         }
-        imGuiGlfw.newFrame()
+        ImGuiPlatform.newFrame()
         val io = ImGui.getIO()
         // Feed input BEFORE NewFrame: it consumes queued events and decides which window owns the mouse.
         // Writing MousePos afterwards updates widget rendering but leaves WantCaptureMouse at the old point.
@@ -132,28 +123,27 @@ object ImGuiManager {
             if (!viewportsActive || synthetic) {
                 val mh = net.minecraft.client.Minecraft.getInstance().mouseHandler
                 // Also updates the GLFW backend's last valid position and handles desktop coordinates.
-                imGuiGlfw.cursorPosCallback(windowHandle, mh.xpos(), mh.ypos())
+                ImGuiPlatform.cursorPosEvent(windowHandle, mh.xpos(), mh.ypos())
                 if (synthetic && viewportsActive) {
                     // OS hover may point at another app while MCP supplies input to Minecraft.
-                    io.addMouseViewportEvent(ImGui.getMainViewport().id)
+                    ImGuiPlatform.markMainViewportHovered()
                 }
             } else if (mainHovered) {
-                val x = DoubleArray(1); val y = DoubleArray(1)
-                GLFW.glfwGetCursorPos(windowHandle, x, y)
-                imGuiGlfw.cursorPosCallback(windowHandle, x[0], y[0])
+                val (x, y) = ImGuiPlatform.cursorPos(windowHandle)
+                ImGuiPlatform.cursorPosEvent(windowHandle, x, y)
             }
-            // Detached windows keep the input supplied by their own GLFW callbacks.
+            // Detached windows keep the input supplied by their own platform callbacks.
         }
         frameOpen = true
     }
 
     /** True when the OS cursor is over the game window or any of our external viewport windows. */
     private fun anyOwnWindowHovered(): Boolean {
-        if (GLFW.glfwGetWindowAttrib(windowHandle, GLFW.GLFW_HOVERED) == GLFW.GLFW_TRUE) return true
+        if (ImGuiPlatform.isHovered(windowHandle)) return true
         val pio = ImGui.getPlatformIO()
         for (i in 1 until pio.viewportsSize) {
             val h = pio.getViewports(i).platformHandle
-            if (h != 0L && GLFW.glfwGetWindowAttrib(h, GLFW.GLFW_HOVERED) == GLFW.GLFW_TRUE) return true
+            if (h != 0L && ImGuiPlatform.isHovered(h)) return true
         }
         return false
     }
@@ -166,7 +156,7 @@ object ImGuiManager {
             // Create/move/render the external windows, then give Minecraft its context back.
             ImGui.updatePlatformWindows()
             ImGui.renderPlatformWindowsDefault()
-            GLFW.glfwMakeContextCurrent(windowHandle)
+            ImGuiPlatform.makeContextCurrent(windowHandle)
         }
     }
 
@@ -207,11 +197,12 @@ object ImGuiManager {
                 val pio = ImGui.getPlatformIO()
                 for (i in 1 until pio.viewportsSize) {
                     val handle = pio.getViewports(i).platformHandle
-                    if (handle != 0L) GLFW.glfwHideWindow(handle)
+                    if (handle != 0L) ImGuiPlatform.hideWindow(handle)
                 }
                 platformWindowsHidden = true
             }
         }
+        ImGuiPlatform.resetCursor()
         typedChars.clear()
         capturedKeys.clear()
         capturedButtons.clear()
@@ -224,7 +215,7 @@ object ImGuiManager {
         GameViewport.restore()
         GameViewport.shutdown()
         ImGuiGl3Renderer.shutdown()
-        imGuiGlfw.shutdown()
+        ImGuiPlatform.shutdown()
         ImGui.destroyContext(context)
         if (previous.ptr != context?.ptr) ImGui.setCurrentContext(previous)
         context = null
@@ -235,25 +226,26 @@ object ImGuiManager {
 
     // Input forwarders (called from the mixins).
     @JvmStatic fun mouseButtonCallback(window: Long, button: Int, action: Int, mods: Int) = withContext {
-        if (action == GLFW.GLFW_RELEASE) capturedButtons.remove(button) else capturedButtons.add(button)
-        imGuiGlfw.mouseButtonCallback(window, button, action, mods)
+        if (action == RELEASE) capturedButtons.remove(button) else capturedButtons.add(button)
+        ImGuiPlatform.mouseButton(window, button, action, mods)
     }
-    @JvmStatic fun scrollCallback(window: Long, xOffset: Double, yOffset: Double) = withContext { imGuiGlfw.scrollCallback(window, xOffset, yOffset) }
+    @JvmStatic fun scrollCallback(window: Long, xOffset: Double, yOffset: Double) = withContext { ImGuiPlatform.scroll(window, xOffset, yOffset) }
+    /** [scancode] is the event's second code: the GLFW scancode before 26.3, the SDL keycode from 26.3. */
     @JvmStatic fun keyCallback(window: Long, key: Int, scancode: Int, action: Int, mods: Int) = withContext {
-        if (action == GLFW.GLFW_RELEASE) capturedKeys.remove(key) else capturedKeys.add(key)
-        imGuiGlfw.keyCallback(window, key, scancode, action, mods)
+        if (action == RELEASE) capturedKeys.remove(key) else capturedKeys.add(key)
+        ImGuiPlatform.key(window, key, scancode, action, mods)
     }
     @JvmStatic fun releaseKey(window: Long, key: Int, scancode: Int, mods: Int): Boolean {
         if (!initialized || key !in capturedKeys) return false
-        keyCallback(window, key, scancode, GLFW.GLFW_RELEASE, mods)
+        keyCallback(window, key, scancode, RELEASE, mods)
         return true
     }
     @JvmStatic fun releaseButton(window: Long, button: Int, mods: Int): Boolean {
         if (!initialized || button !in capturedButtons) return false
-        mouseButtonCallback(window, button, GLFW.GLFW_RELEASE, mods)
+        mouseButtonCallback(window, button, RELEASE, mods)
         return true
     }
-    @JvmStatic fun charCallback(window: Long, codepoint: Int) = withContext { imGuiGlfw.charCallback(window, codepoint); typedChars.add(codepoint) }
+    @JvmStatic fun charCallback(window: Long, codepoint: Int) = withContext { ImGuiPlatform.char(window, codepoint); typedChars.add(codepoint) }
 
     /** Drain typed characters (oldest first) for custom text widgets. */
     fun drainTypedChars(): List<Int> {

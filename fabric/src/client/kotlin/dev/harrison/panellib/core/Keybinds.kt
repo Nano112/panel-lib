@@ -11,7 +11,6 @@ import net.minecraft.client.KeyMapping
 //? if >=1.21.9 {
 import net.minecraft.resources.Identifier
 //?}
-import org.lwjgl.glfw.GLFW
 
 /** All key mappings: the overlay toggle plus everything consumers register through the API. */
 object Keybinds : KeybindRegistrar {
@@ -22,7 +21,7 @@ object Keybinds : KeybindRegistrar {
     lateinit var overlay: KeyMapping; private set
     private val actions = ArrayList<Pair<KeyMapping, () -> Unit>>()
 
-    fun registerBuiltins(overlayKey: Int = GLFW.GLFW_KEY_K) {
+    fun registerBuiltins(overlayKey: Int = InputConstants.KEY_K) {
         overlay = bind("key.panellib.overlay", overlayKey)
     }
 
